@@ -366,7 +366,10 @@ div.game-row{cursor:default}
 .kb-status li{display:flex;align-items:center;gap:6px;min-width:0;padding:6px 8px;border:1px solid var(--line);border-radius:10px;font-size:12px;font-weight:700}
 .kb-status .name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kb-line{list-style:none;margin:0 auto;padding:0;width:min(100%,280px);display:flex;flex-direction:column;gap:6px}
-.kb-end{text-align:center;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em}
+.kb-end{display:flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:700;color:var(--muted)}
+.kb-end b{font-family:var(--serif);font-size:18px;color:var(--gold)}
+.kb-end i{font-style:normal;font-size:10px;color:var(--gold);opacity:.7}
+.kb-end.top{padding-bottom:2px}.kb-end.bottom{padding-top:2px}
 .kb-card{position:relative;display:flex;align-items:center;gap:8px;min-height:50px;padding:6px 8px 6px 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--panel-2);transition:transform .15s ease}
 .kb-card.drag{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
 .kb-card.drag::before{content:"";position:absolute;left:4px;top:50%;width:3px;height:18px;margin-top:-9px;border-left:1px dotted var(--muted);border-right:1px dotted var(--muted)}
@@ -399,3 +402,11 @@ div.game-row{cursor:default}
 .tag.life{border-color:rgba(229,138,138,.55);color:#F1B8B8}
 .points-editor.three{grid-template-columns:repeat(3,1fr)}
 @media (prefers-reduced-motion:reduce){.kb-card.just .kb-num{animation:none}}
+
+/* ---------- intro after entering ---------- */
+#intro{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:20px;background:rgba(5,5,7,.72);backdrop-filter:blur(4px)}
+#intro[hidden]{display:none}
+.intro-card{width:min(100%,400px);padding:20px;display:flex;flex-direction:column;gap:12px;border-color:rgba(217,183,106,.5)}
+.intro-card h2{margin:0;font-family:var(--serif);font-size:24px}
+.intro-card ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.7}
+.intro-card li::marker{color:var(--gold)}

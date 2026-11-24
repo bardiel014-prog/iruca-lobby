@@ -76,7 +76,7 @@ const GAME_ICONS={
 // Families shown top to bottom. Add a new game here (and in games.js) to grow the menu.
 const GAME_MENU=[
  {key:'chinchiro',name:'チンチロ',icon:'dice',desc:'サイコロ3つの役で勝負。配信者が指名した最大4人で卓を囲む。',variants:[['chinchiro-rotation','親回り','全員が1回ずつ親'],['chinchiro-fixed','親固定','配信者がずっと親・1回'],['chinchiro-cheat','イカサマあり','親固定・シゴロ賽OK']]},
- {key:'kotoba',name:'ことばならべ',icon:'line',desc:'数字は言わずに、お題に沿った言葉だけで小さい順に並べる協力ゲーム。最大8人、並べるのは配信者。',variants:[['kotoba','','']]},
+ {key:'kotoba',name:'ことばならべ',icon:'line',desc:'数字は言わずに、お題に沿った言葉だけで大きさ順に並べる協力ゲーム。最大8人、並べるのは配信者。',variants:[['kotoba','','']]},
  {key:'highlow',name:'ハイ＆ロー',icon:'card',desc:'配信者がカードをめくり、入室中のリスナー全員が次のカードに賭ける。',variants:[['highlow','','']]}
 ].map(f=>({...f,variants:f.variants.filter(([id])=>GAMES.some(g=>g.id===id))})).filter(f=>f.variants.length);
 const gameIcon=n=>`<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GAME_ICONS[n]}</svg>`;
@@ -116,7 +116,7 @@ function entry(error=''){
   <ol class="steps"><li><b>01</b>集まる</li><li><b>02</b>呼ばれる</li><li><b>03</b>いっしょに遊ぶ</li></ol>
  </section>`;
  $('#entry').addEventListener('change',e=>{if(e.target.name!=='gameType')return;document.querySelectorAll('#entry .game-row').forEach(r=>r.classList.toggle('on',!!r.querySelector('input:checked')));const t=$('#entry input[name=title]');if(t&&Object.values(DEFAULT_TITLES).includes(t.value))t.value=DEFAULT_TITLES[e.target.value]||DEFAULT_TITLES.chinchiro});
- $('#entry').onsubmit=async e=>{e.preventDefault();const b=e.currentTarget.querySelector('button[type=submit]');b.disabled=true;try{const data=Object.fromEntries(new FormData(e.currentTarget));const result=await api(room?`rooms/${room}/join`:'rooms',data);auth=result.token;state=result.state;recoveringRoom=null;remember(state);history.replaceState(null,'',`?room=${state.id}`);last='';render()}catch(err){toast(err.message);b.disabled=false}};
+ $('#entry').onsubmit=async e=>{e.preventDefault();const b=e.currentTarget.querySelector('button[type=submit]');b.disabled=true;try{const data=Object.fromEntries(new FormData(e.currentTarget));const result=await api(room?`rooms/${room}/join`:'rooms',data);auth=result.token;state=result.state;recoveringRoom=null;remember(state);history.replaceState(null,'',`?room=${state.id}`);last='';render();showIntro(state)}catch(err){toast(err.message);b.disabled=false}};
 }
 
 // ---------- room ----------
@@ -350,15 +350,15 @@ function renderKotoba(s){
  } else if(['arrange','reveal'].includes(kb.phase)||(kb.phase==='result'&&kb.result&&!kb.result.void)){
   const order=kb.order,arrange=kb.phase==='arrange'&&s.isHost,result=kb.phase==='result';
   let maxSoFar=0;
-  const rows=order.map((id,i)=>{
+  const rows=[...order.map((id,i)=>{
    const c=byId(id),revealed=i<kb.revealed,num=c.number,broke=revealed&&num!==null&&num<maxSoFar;if(revealed&&num!==null)maxSoFar=Math.max(maxSoFar,num);
    const rr=result?kb.result.rows.find(x=>x.id===id):null;
    const badge=revealed&&num!==null?`<span class="kb-num ${rr?(rr.ok?'ok':'ng'):broke?'ng':''}">${num}</span>`:c.id===s.me&&num!==null?`<span class="kb-num own" title="あなたの数字">${num}</span>`:'<span class="kb-num back">?</span>';
-   return `<li class="kb-card ${arrange?'drag':''} ${revealed?'open':''} ${revealed&&i===kb.revealed-1&&kb.phase==='reveal'?'just':''} ${c.id===s.me?'me':''} ${rr?(rr.ok?'ok':'ng'):broke?'ng':''}" data-kb-id="${id}" ${arrange?`tabindex="0" aria-label="${i+1}番目 ${esc(c.word)}（${esc(c.name)}）。上下キーで移動"`:''}><div class="kb-body"><small>${esc(c.name)}${c.id===s.me?'（あなた）':''}</small><strong>${esc(c.word)}</strong></div>${badge}</li>`}).join('');
+   return `<li class="kb-card ${arrange?'drag':''} ${revealed?'open':''} ${revealed&&i===kb.revealed-1&&kb.phase==='reveal'?'just':''} ${c.id===s.me?'me':''} ${rr?(rr.ok?'ok':'ng'):broke?'ng':''}" data-kb-id="${id}" ${arrange?`tabindex="0" aria-label="小さい方から${i+1}番目 ${esc(c.word)}（${esc(c.name)}）。上下キーで移動"`:''}><div class="kb-body"><small>${esc(c.name)}${c.id===s.me?'（あなた）':''}</small><strong>${esc(c.word)}</strong></div>${badge}</li>`})].reverse().join('');
   const out=kb.cards.filter(c=>c.excluded);
   const summary=result?`<div class="kb-summary ${kb.result.correct===kb.result.total?'perfect':''}"><strong>${kb.result.correct===kb.result.total?'全員成功！':`${kb.result.correct} / ${kb.result.total} 枚が正しい位置`}</strong><span>正しい位置だった人の成功数が増えました</span></div>`:'';
   stage=`<section class="card stage kb-stage">${themeCard||(result&&kb.theme?`<div class="kb-theme"><p class="eyebrow">第${kb.round}回のお題</p><h2>${esc(kb.theme.text)}</h2>${scale}</div>`:'')}${summary}
-   <ol class="kb-line" aria-label="小さい順の並び"><li class="kb-end">小さい（1）</li>${rows}<li class="kb-end">大きい（100）</li></ol>
+   <ol class="kb-line" aria-label="上ほど大きい並び"><li class="kb-end top"><b>100</b>${esc(kb.theme?.high||'大きい')}<i aria-hidden="true">▲</i></li>${rows}<li class="kb-end bottom"><b>1</b>${esc(kb.theme?.low||'小さい')}<i aria-hidden="true">▼</i></li></ol>
    ${out.length?`<p class="note center">時間切れで除外：${out.map(c=>esc(c.name)).join('、')}</p>`:''}
    ${arrange?`<button class="btn primary big" id="kb-reveal">並びを決めてオープン</button><p class="note center">パネルをドラッグして並べ替え（時間制限なし）</p>`
     :kb.phase==='arrange'?'<p class="note center">配信者が並べ替え中。動きはリアルタイムで見えます</p>'
@@ -382,7 +382,7 @@ function renderKotoba(s){
     ${s.isHost&&!isHost&&!p.demo?`<button class="btn sm ${editing===p.id?'active':''}" data-edit="${p.id}" aria-expanded="${editing===p.id}" aria-label="${esc(p.name)}のライフを調整">ライフ</button>`:''}
     ${canPick?`<button class="btn sm ${picked?'':'pick'}" data-kb-select="${p.id}" ${!picked&&(!p.want||t.lives<1||sel.length>=8)?'disabled':''}>${picked?'外す':'指名'}</button>`:''}</div>
     ${s.isHost&&editing===p.id?`<div class="points-editor three" role="group" aria-label="${esc(p.name)}のライフ">${[[1,'+1'],[5,'+5'],[-1,'−1']].map(([d,l])=>`<button class="btn ${d>0?'plus':'minus'}" data-kb-lives="${p.id}" data-delta="${d}">${l}</button>`).join('')}</div>`:''}</li>`}).join('');
- const rules=`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>ことばならべ</span></div><ol class="kb-rules"><li>指名された参加者に、1〜100の数字が1枚ずつこっそり配られる（配信者は並べ係）</li><li>お題に沿って、自分の数字の大きさを表す言葉を<b>30秒以内</b>に出す。出さなかった人は除外</li><li>言葉だけを手がかりに、<b>配信者だけ</b>が小さい順に並べる（時間制限なし）</li><li>配信者が1枚ずつめくる。<b>正しい位置</b>だった人は成功数+1</li></ol><p class="note">参加するとライフが1減る。ライフは配信者が足す。数字は本人にしか見えない。</p></section>`;
+ const rules=`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>ことばならべ</span></div><ol class="kb-rules"><li>指名された参加者に、1〜100の数字が1枚ずつこっそり配られる（配信者は並べ係）</li><li>お題に沿って、自分の数字の大きさを表す言葉を<b>30秒以内</b>に出す。出さなかった人は除外</li><li>言葉だけを手がかりに、<b>配信者だけ</b>が上ほど大きくなるように並べる（時間制限なし）</li><li>配信者が1枚ずつめくる。<b>正しい位置</b>だった人は成功数+1</li></ol><p class="note">参加するとライフが1減る。ライフは配信者が足す。数字は本人にしか見えない。</p></section>`;
  const menu=menuOpen?`<div class="scrim" data-close-menu></div><div class="menu card" role="menu"><button class="menu-item" data-share role="menuitem">招待URLを共有</button>${s.isHost&&kb.phase==='result'?'<button class="menu-item" id="kb-reset" role="menuitem">結果を閉じて待機所へ</button>':''}<a class="menu-item" href="./" role="menuitem">トップへ（部屋はそのまま）</a></div>`:'';
  app.innerHTML=`<header class="topbar"><a class="brand" href="./">${icon('mark')}<span>あつまる卓</span></a><div class="top-actions"><button class="icon-btn" data-share aria-label="招待URLを共有">${icon('share')}</button><button class="icon-btn ${menuOpen?'active':''}" data-menu aria-label="メニュー" aria-expanded="${menuOpen}">${icon('menu')}</button></div></header>${menu}
  <section class="room-head"><div class="chips"><span class="room-id">ROOM ${esc(s.id)}</span><span class="phase ${open?'':'live'}">${KB_PHASE[kb.phase]}</span><span class="counts">入室 ${s.players.filter(p=>p.online&&!p.demo).length}${kb.cards.length&&!open?` · 参加 ${kb.cards.filter(c=>!c.excluded).length}`:''}</span></div>
@@ -394,6 +394,36 @@ function renderKotoba(s){
  const input=$('#kb-word');if(input){input.value=kbDraft.text}
  updateTimer();
 }
+// ---------- first-time explanation after entering a room ----------
+const INTRO={
+ host:{
+  chinchiro:['リスナーが「参加希望」を出したら、待機所で「指名」して卓に入れます（最大3人）。','リスナーの持ち点は0から始まります。名前の横の「点数」で配ってください。','2人以上そろったら「ゲームスタート」。招待URLは右上の共有ボタンからどうぞ。'],
+  cheat:['リスナーが「参加希望」を出したら、待機所で「指名」して卓に入れます（最大3人）。','リスナーの持ち点は0から始まります。「点数」で配ってください。','あなたの番では、普通のサイコロか「シゴロ賽」を選べます。見破られたら掛け金の10倍を払います。'],
+  highlow:['リスナーの持ち点は0から始まります。名前の横の「点数」で配ってください。','あなたは「カードをめくる」を押すだけ。入室中のリスナー全員がベットできます。','招待URLは右上の共有ボタンからどうぞ。'],
+  kotoba:['参加にはライフが1つ要ります。リスナーの名前の横の「ライフ」で足してください。','参加希望を出した人を「指名」して開始（最大8人）。','並べ替えとオープンは、あなただけが行います。招待URLは右上の共有ボタンから。']
+ },
+ listener:{
+  chinchiro:['「参加希望」を出すと、配信者に指名されたときに卓に入れます。','このまま観戦もできます。持ち点は配信者が配ります。'],
+  cheat:['「参加希望」を出すと、配信者に指名されたときに卓に入れます。このまま観戦もできます。','参加中は、いつでも「イカサマを指摘」できます。当たれば掛け金の10倍、外れたら大損です。'],
+  highlow:['次のカードが今より上（ハイ）か下（ロー）かに賭けられます。','持ち点は配信者が配ります。0点のままでもベットに参加できます。'],
+  kotoba:['「参加希望」を出すと、配信者に指名されたときに参加できます（ライフが1つ要ります。ライフは配信者が足します）。','このまま観戦もできます。']
+ }
+};
+function introKind(s){return s.gameType==='highlow'?'highlow':s.gameType==='kotoba'?'kotoba':s.gameType==='chinchiro-cheat'?'cheat':'chinchiro'}
+function showIntro(s){
+ const host=s.isHost,kind=introKind(s),lines=INTRO[host?'host':'listener'][kind],me=s.players.find(p=>p.id===s.me);
+ const canWant=!host&&kind!=='highlow'&&!me?.want;
+ const names={chinchiro:'チンチロ',cheat:'チンチロ（イカサマあり）',highlow:'ハイ＆ロー',kotoba:'ことばならべ'};
+ const box=$('#intro');
+ box.innerHTML=`<div class="intro-card card" role="dialog" aria-modal="true" aria-labelledby="intro-title"><p class="eyebrow">${host?'配信者のあなたへ':'ようこそ'}</p><h2 id="intro-title">${esc(names[kind])}</h2><ul>${lines.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
+  ${canWant?'<button class="btn primary big" data-intro="want">参加希望を出して入る</button><button class="btn big" data-intro="watch">観戦で入る</button>':'<button class="btn primary big" data-intro="ok">OK</button>'}</div>`;
+ box.hidden=false;box.querySelector('button')?.focus();
+}
+$('#intro').addEventListener('click',async e=>{
+ const b=e.target.closest('[data-intro]');if(!b)return;
+ const box=$('#intro');box.hidden=true;box.innerHTML='';
+ if(b.dataset.intro==='want'&&state)await action({type:'want',value:true});
+});
 function wantButton(me){return `<button class="btn ${me.want?'':'primary'} big" data-want="${me.want?'0':'1'}">${me.want?'参加希望を取り消す':'参加希望を出す'}</button>`}
 
 // ---------- events (delegated; CSP-safe) ----------
@@ -451,12 +481,12 @@ function kbDrop(e){
  const d=kbDrag;if(!d||e.pointerId!==d.id)return;kbDrag=null;
  d.cards.forEach(c=>{c.style.transform='';c.classList.remove('dragging')});
  if(d.to===d.from){last='';render();return}
- const order=[...state.kb.order],[moved]=order.splice(d.from,1);order.splice(d.to,0,moved);kbCommit(order);
+ const disp=[...state.kb.order].reverse(),[moved]=disp.splice(d.from,1);disp.splice(d.to,0,moved);kbCommit(disp.reverse());
 }
 app.addEventListener('pointerup',kbDrop);app.addEventListener('pointercancel',kbDrop);
 app.addEventListener('keydown',e=>{
  const li=e.target.closest?.('.kb-card.drag');if(!li||!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();
- const order=[...state.kb.order],i=order.indexOf(li.dataset.kbId),j=i+(e.key==='ArrowUp'?-1:1);if(j<0||j>=order.length)return;
+ const order=[...state.kb.order],i=order.indexOf(li.dataset.kbId),j=i+(e.key==='ArrowUp'?1:-1);if(j<0||j>=order.length)return;
  [order[i],order[j]]=[order[j],order[i]];kbCommit(order);requestAnimationFrame(()=>document.querySelector(`.kb-card[data-kb-id="${order[j]}"]`)?.focus());
 });
 app.addEventListener('toggle',e=>{if(e.target.id==='log')logOpen=e.target.open},true);

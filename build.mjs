@@ -7,10 +7,11 @@ code=code.replace('export const server = http.createServer(async (req, res) => {
 code=code.slice(0,code.indexOf('const timer='));
 code=code.trim().replace(/\}\);$/,'}');
 const assets=Object.fromEntries(['index.html','app.js','games.js','style.css','dice-bundle.js'].map(f=>[f,fs.readFileSync('public/'+f,'utf8')]));
+for(const f of fs.readdirSync('public').filter(f=>/^og-.*\.jpg$/.test(f)))assets[f]={b64:fs.readFileSync('public/'+f).toString('base64')};
 const prefix=`import {GAMES,gameDefinition} from './public/games.js';\nimport {evaluate,balance,inGame,beginGame,setBet,startRoundIfReady,rollPlayer,tickGame,nextRound,returnLobby,logEvent,timerState,accuse} from './game.mjs';\nimport {ROOM_TTL,roomExpiry,roomExpired} from './room-life.mjs';\nimport {HL_GAME,hlInit,hlBet,hlFlip,hlState,cpuHighLowBets,cardLabel} from './highlow.mjs';\nimport {KB_GAME,kbInit,kbSelect,kbLives,kbStart,kbRetheme,kbWord,kbTick,kbMove,kbReveal,kbReset,kbTimer,kbState} from './kotoba.mjs';\nconst assets=${JSON.stringify(assets)};
 const randomBytes=n=>({toString:()=>Array.from(crypto.getRandomValues(new Uint8Array(n)),v=>v.toString(16).padStart(2,'0')).join('')});
 const randomInt=(min,max)=>{let x; const limit=Math.floor(4294967296/(max-min))*(max-min); do{x=crypto.getRandomValues(new Uint32Array(1))[0]}while(x>=limit);return min+x%(max-min)};
-async function readFile(url){return assets[url.pathname.split('/').pop()]}
+async function readFile(url){const a=assets[url.pathname.split('/').pop()];return a&&typeof a==='object'?Uint8Array.from(atob(a.b64),c=>c.charCodeAt(0)):a}
 export default {async fetch(request,env){
 const url=new URL(request.url), roomId=url.pathname.match(/^\\/api\\/rooms\\/([a-f0-9]{8})/)?.[1];
 const payload=await request.text();
@@ -20,6 +21,8 @@ const suffix=`
 if(url.pathname==='/api/rooms'&&request.method==='POST')await env.DB.prepare("DELETE FROM lobby_rooms WHERE COALESCE(json_extract(data,'$.lastPlayedAt'),json_extract(data,'$.createdAt'),json_extract(data,'$.updated'),0) <= ?").bind(Date.now()-ROOM_TTL).run();
 let original=null;
 if(roomId){original=await env.DB.prepare('SELECT data,version FROM lobby_rooms WHERE id = ?').bind(roomId).first();if(original){const r=JSON.parse(original.data);if(roomExpired(r)){const gone=await env.DB.prepare('DELETE FROM lobby_rooms WHERE id = ? AND version = ?').bind(roomId,original.version).run();if(!gone.meta.changes)continue;return Response.json({error:'最終プレイから24時間が経過し、部屋IDは解放されました'},{status:404})}r.players=new Map(r.players);rooms.set(roomId,r)}}
+const pageRoom=!roomId&&request.method==='GET'&&!url.pathname.startsWith('/api/')?url.searchParams.get('room'):null;
+if(pageRoom&&/^[a-f0-9]{8}$/.test(pageRoom)){const row=await env.DB.prepare('SELECT data FROM lobby_rooms WHERE id = ?').bind(pageRoom).first();if(row){const pr=JSON.parse(row.data);if(!roomExpired(pr)){pr.players=new Map(pr.players);rooms.set(pageRoom,pr)}}}
 const req={url:url.pathname+url.search,method:request.method,headers:{...Object.fromEntries(request.headers),host:url.host},async *[Symbol.asyncIterator](){yield payload}};
 let status=200,headers={},response='';
 const res={writeHead(s,h){status=s;headers=h},end(s){response=s??''}};

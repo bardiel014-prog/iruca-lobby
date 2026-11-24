@@ -24,6 +24,19 @@ function state(r,me){
     players:[r.host,...r.players.values()].map(p=>({id:p.id,name:p.name,want:p.want,online:active(p),demo:!!p.demo,
       points:balance(p),plays:p.plays,dice:p.dice,attempts:p.attempts,done:p.done,bet:p.bet||100,ready:!!p.ready,roundDelta:p.roundDelta??null}))};
 }
+const OG_IMAGES=['og-default.jpg','og-chinchiro.jpg','og-chinchiro-cheat.jpg','og-highlow.jpg','og-kotoba.jpg'];
+const PUBLIC_BASE=(globalThis.process?.env?.LOBBY_PUBLIC_URL||'https://iruca.tech/lobby/').replace(/\/?$/,'/');
+const attr=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Link cards for X / Discord: crawlers do not run JS, so the server writes the tags into the page.
+function ogTags(r,id){
+  const kind=!r?'default':r.gameType==='chinchiro-cheat'?'chinchiro-cheat':r.gameType==='highlow'?'highlow':r.gameType==='kotoba'?'kotoba':'chinchiro';
+  const game={'chinchiro':'チンチロ','chinchiro-cheat':'イカサマチンチロ','highlow':'ハイ＆ロー','kotoba':'ことばならべ'}[kind];
+  const title=r?`${r.host.name}の部屋で${game}を遊ぼう`:'あつまる卓 — 配信で、いっしょに。';
+  const desc=r?`「${r.title}」に招待されています。URLを開いて名前を入れるだけで参加できます（登録なし）。`:'配信者とリスナーで遊べるゲーム。チンチロ・ハイ＆ロー・ことばならべ。URLを開くだけで参加・登録なし。';
+  const url=PUBLIC_BASE+(r?`?room=${id}`:'');
+  return [['og:type','website'],['og:site_name','あつまる卓'],['og:locale','ja_JP'],['og:title',title],['og:description',desc],['og:url',url],['og:image',PUBLIC_BASE+`og-${kind}.jpg`],['og:image:width','1200'],['og:image:height','630'],['og:image:alt',`あつまる卓 ${game||''}`.trim()]]
+    .map(([k,v])=>`<meta property="${k}" content="${attr(v)}">`).join('')+`<meta name="twitter:card" content="summary_large_image"><meta name="description" content="${attr(desc)}">`;
+}
 const log=logEvent;
 function kbAdvance(r){
   const res=kbTick(r);if(!res)return;
@@ -161,8 +174,10 @@ export const server = http.createServer(async (req, res) => {
       return send(200,state(r,me));
     }
     if (req.method!=='GET' && req.method!=='HEAD') fail('操作できません',405);
-    const file = ['app.js','games.js','dice-bundle.js','style.css'].find(f=>url.pathname.endsWith('/'+f))||'index.html';
-    const data=await readFile(new URL(`./public/${file}`,import.meta.url));
+    const file = ['app.js','games.js','dice-bundle.js','style.css',...OG_IMAGES].find(f=>url.pathname.endsWith('/'+f))||'index.html';
+    let data=await readFile(new URL(`./public/${file}`,import.meta.url));
+    if(file.endsWith('.jpg')){res.writeHead(200,{'content-type':'image/jpeg','cache-control':'public, max-age=86400','x-content-type-options':'nosniff'});return res.end(req.method==='HEAD'?'':data)}
+    if(file==='index.html'){const id=url.searchParams.get('room'),room=/^[a-f0-9]{8}$/.test(id||'')?rooms.get(id):null;data=(typeof data==='string'?data:new TextDecoder().decode(data)).replace('<!--og-->',ogTags(room&&!roomExpired(room)?room:null,id))}
     res.writeHead(200,{'content-type':file.endsWith('.js')?'text/javascript; charset=utf-8':file.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}); res.end(req.method==='HEAD'?undefined:data);
   } catch(e) { send(e.status||500,{error:e.status?e.message:'通信に失敗しました'}); }
 });
