@@ -7,7 +7,7 @@ code=code.replace('export const server = http.createServer(async (req, res) => {
 code=code.slice(0,code.indexOf('const timer='));
 code=code.trim().replace(/\}\);$/,'}');
 const assets=Object.fromEntries(['index.html','app.js','games.js','style.css','dice-bundle.js'].map(f=>[f,fs.readFileSync('public/'+f,'utf8')]));
-const prefix=`import {GAMES,gameDefinition} from './public/games.js';\nimport {evaluate,balance,inGame,beginGame,setBet,startRoundIfReady,rollPlayer,tickGame,nextRound,returnLobby,logEvent,timerState,accuse} from './game.mjs';\nimport {ROOM_TTL,roomExpiry,roomExpired} from './room-life.mjs';\nimport {HL_GAME,hlInit,hlBet,hlFlip,hlState,cpuHighLowBets,cardLabel} from './highlow.mjs';\nconst assets=${JSON.stringify(assets)};
+const prefix=`import {GAMES,gameDefinition} from './public/games.js';\nimport {evaluate,balance,inGame,beginGame,setBet,startRoundIfReady,rollPlayer,tickGame,nextRound,returnLobby,logEvent,timerState,accuse} from './game.mjs';\nimport {ROOM_TTL,roomExpiry,roomExpired} from './room-life.mjs';\nimport {HL_GAME,hlInit,hlBet,hlFlip,hlState,cpuHighLowBets,cardLabel} from './highlow.mjs';\nimport {KB_GAME,kbInit,kbSelect,kbLives,kbStart,kbRetheme,kbWord,kbTick,kbMove,kbReveal,kbReset,kbTimer,kbState} from './kotoba.mjs';\nconst assets=${JSON.stringify(assets)};
 const randomBytes=n=>({toString:()=>Array.from(crypto.getRandomValues(new Uint8Array(n)),v=>v.toString(16).padStart(2,'0')).join('')});
 const randomInt=(min,max)=>{let x; const limit=Math.floor(4294967296/(max-min))*(max-min); do{x=crypto.getRandomValues(new Uint32Array(1))[0]}while(x>=limit);return min+x%(max-min)};
 async function readFile(url){return assets[url.pathname.split('/').pop()]}

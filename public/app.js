@@ -70,11 +70,13 @@ const trayHtml=()=>`<div class="tray-view" role="img" aria-label="トレイの�
 // ---------- entry ----------
 const GAME_ICONS={
  dice:'<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/>',
+ line:'<rect x="3" y="14" width="4" height="6" rx="1"/><rect x="10" y="10" width="4" height="10" rx="1"/><rect x="17" y="5" width="4" height="15" rx="1"/>',
  card:'<rect x="7" y="3" width="12" height="17" rx="2"/><path d="M5 6.5 3.6 7l3.6 13.4 7.3-2"/><path d="M13 9.5c-1.6 1.2-2.6 2.2-2.6 3.3a1.6 1.6 0 0 0 2.6 1.2 1.6 1.6 0 0 0 2.6-1.2c0-1.1-1-2.1-2.6-3.3z"/>'
 };
 // Families shown top to bottom. Add a new game here (and in games.js) to grow the menu.
 const GAME_MENU=[
  {key:'chinchiro',name:'チンチロ',icon:'dice',desc:'サイコロ3つの役で勝負。配信者が指名した最大4人で卓を囲む。',variants:[['chinchiro-rotation','親回り','全員が1回ずつ親'],['chinchiro-fixed','親固定','配信者がずっと親・1回'],['chinchiro-cheat','イカサマあり','親固定・シゴロ賽OK']]},
+ {key:'kotoba',name:'ことばならべ',icon:'line',desc:'数字は言わずに、お題に沿った言葉だけで小さい順に並べる協力ゲーム。最大8人、並べるのは配信者。',variants:[['kotoba','','']]},
  {key:'highlow',name:'ハイ＆ロー',icon:'card',desc:'配信者がカードをめくり、入室中のリスナー全員が次のカードに賭ける。',variants:[['highlow','','']]}
 ].map(f=>({...f,variants:f.variants.filter(([id])=>GAMES.some(g=>g.id===id))})).filter(f=>f.variants.length);
 const gameIcon=n=>`<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GAME_ICONS[n]}</svg>`;
@@ -92,7 +94,7 @@ function rulesHtml(kind,fixed){
   :kind==='cheat'?`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>チンチロ イカサマあり</span></div><div class="roles"><span>ピンゾロ <b>×5</b></span><span>ゾロ目 <b>×3</b></span><span>シゴロ <b>×2</b></span><span>出目 <b>×1</b></span><span>ヒフミ <b>2倍払い</b></span><span>目なし <b>3回まで</b></span></div><p class="note">配信者がずっと親。親は普通のサイコロか、4・5・6しか出ない「シゴロ賽」を選んで振れる。子はゲーム中いつでも「イカサマを指摘」でき、その時点でゲームは不成立になり判定タイムへ。<br>当たり：親が指摘した子に掛け金の10倍を払う。<br>外れ：指摘した子が、ほかの子それぞれに（自分の掛け金＋その子の掛け金）×2を払い、親にもその合計を払う。</p></section>`
   :`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>チンチロ ${fixed?'親固定':'親回り'}</span></div><div class="roles"><span>ピンゾロ <b>×5</b></span><span>ゾロ目 <b>×3</b></span><span>シゴロ <b>×2</b></span><span>出目 <b>×1</b></span><span>ヒフミ <b>2倍払い</b></span><span>目なし <b>3回まで</b></span></div><p class="note">${fixed?'配信者が親。子は配信者とだけ精算して1ゲーム。':'親と順番を抽選し、全員が親を務めたら1ゲーム。'}掛け金・投擲・次への進行はそれぞれ20秒で自動。0点以下でもゲーム中は100点で続行し、終了後にリスナーは待機所へ戻ります。</p></section>`;
 }
-const DEFAULT_TITLES={chinchiro:'今夜のチンチロ部屋','chinchiro-rotation':'今夜のチンチロ部屋','chinchiro-fixed':'今夜のチンチロ部屋',highlow:'今夜のハイ＆ロー'};
+const DEFAULT_TITLES={chinchiro:'今夜のチンチロ部屋','chinchiro-rotation':'今夜のチンチロ部屋','chinchiro-fixed':'今夜のチンチロ部屋',highlow:'今夜のハイ＆ロー',kotoba:'今夜のことばならべ'};
 function entry(error=''){
  menuOpen=false;
  const hero=[4,5,6].map((n,i)=>`<span class="flat-die" style="--tilt:${[-8,5,-3][i]}deg">${faceHtml(n)}</span>`).join('');
@@ -129,8 +131,13 @@ function render(){
  const s=state;
  const rolling=!!(s.phase==='playing'&&s.shot&&now()<s.shot.startedAt+s.shot.duration);
  const signature=JSON.stringify({...s,serverNow:0,expiresAt:0})+rolling+editing+menuOpen+JSON.stringify(hlDraft)+[...firstSeen].filter(([,t])=>Date.now()-t<8000).length;
- if(signature===last){return}last=signature;
+ if(signature===last){return}
+ if(kbDrag){setTimeout(()=>render(),300);return}
+ const act=document.activeElement;if(act?.id==='kb-word'&&kbComposing){setTimeout(()=>{last='';render()},400);return}
+ last=signature;const refocus=act?.id==='kb-word'?[act.selectionStart,act.selectionEnd]:null;
+ queueMicrotask(()=>{if(refocus){const el=$('#kb-word');if(el){el.focus();try{el.setSelectionRange(...refocus)}catch{}}}});
  if(s.hl){renderHighLow(s);return}
+ if(s.kb){renderKotoba(s);return}
  const me=s.players.find(p=>p.id===s.me),host=s.players.find(p=>p.id===s.hostId);
  const def=gameDefinition(s.gameType),fixed=def.dealer==='host';
  const play=s.phase==='playing',betting=s.phase==='betting',settled=s.phase==='settlement',finished=s.phase==='finished',judging=s.phase==='judgement',locked=betting||play||settled||judging,open=!locked;
@@ -188,10 +195,11 @@ function render(){
 
  const seats=locked?`<section class="seats">${seatPlayers.map(p=>{
    const turn=(play||settled)&&p.id===s.turnId&&!settled;
-   const st=judging?(p.id===s.judgement?.accuserId?'イカサマを指摘':p.id===s.dealerId?'判定待ち':'判定待ち'):betting?(p.id===s.dealerId?'全額受け':p.ready?`準備OK · ${number(p.bet)}`:'掛け金を選択中'):settled?`${role(p.dice)} ${signed(p.roundDelta)}`:p.dice?.length?role(p.dice):p.id===s.turnId?'いまの番':p.id===s.dealerId?'親':`順番待ち · 賭 ${number(p.bet)}`;
+   const st=rolling&&p.id===s.shot?.playerId?'コロコロ…':judging?(p.id===s.judgement?.accuserId?'イカサマを指摘':p.id===s.dealerId?'判定待ち':'判定待ち'):betting?(p.id===s.dealerId?'全額受け':p.ready?`準備OK · ${number(p.bet)}`:'掛け金を選択中'):settled?`${role(p.dice)} ${signed(p.roundDelta)}`:p.dice?.length?role(p.dice):p.id===s.turnId?'いまの番':p.id===s.dealerId?'親':`順番待ち · 賭 ${number(p.bet)}`;
    return `<div class="seat ${turn?'turn':''}">${p.id===s.dealerId?'<span class="tag gold dealer">親</span>':''}<div class="seat-name">${avatar(p,'sm')}<strong>${nameOnly(p)}</strong></div><div class="seat-pts">${number(p.points)}<small>点</small></div><div class="seat-status">${esc(st)}</div>${!p.online?'<span class="tag offline">接続待ち</span>':''}</div>`}).join('')}</section>`:'';
 
- const lastLog=s.logs[0]?`<div class="lastlog"><span class="tag gold">直前</span><span>${esc(s.logs[0])}</span></div>`:'';
+ const roller=rolling?s.players.find(p=>p.id===s.shot.playerId):null;
+ const lastLog=roller?`<div class="lastlog"><span class="tag gold">直前</span><span>${esc(roller.name)} が振っています…</span></div>`:s.logs[0]?`<div class="lastlog"><span class="tag gold">直前</span><span>${esc(s.logs[0])}</span></div>`:'';
 
  const result=finished&&s.settlement?(()=>{const ranked=s.roundOrder.map(id=>s.players.find(p=>p.id===id)).filter(Boolean).sort((a,b)=>b.points-a.points);
    const j=s.judgement&&s.settlement.judgement?s.judgement:null,host=s.players.find(p=>p.id===s.hostId);
@@ -218,7 +226,7 @@ function render(){
     ${s.isHost&&editing===p.id?`<div class="points-editor" role="group" aria-label="${esc(p.name)}の持ち点">${[100,1000,-100,-1000].map(d=>`<button class="btn ${d>0?'plus':'minus'}" data-points="${p.id}" data-delta="${d}">${d>0?'+':'−'}${Math.abs(d)}</button>`).join('')}</div>`:''}</li>`}).join('');
  const waiting=`<section class="card members"><div class="card-head"><h2>${locked?'待機所・観戦':'待機所'} <span class="count">${locked?watchers.length:s.players.length}</span></h2><span>${s.isHost&&open?'参加希望の人を指名してね':locked?'次のゲームの候補':'入室中の人'}</span></div><ul>${queueRows}</ul></section>`;
 
- const rules=`<details class="card log" id="log" ${logOpen?'open':''}><summary>卓のできごと</summary><ol>${s.logs.slice(0,12).map(t=>`<li>${esc(t)}</li>`).join('')}</ol></details>`;
+ const rules=`<details class="card log" id="log" ${logOpen?'open':''}><summary>卓のできごと</summary><ol>${(rolling?s.logs.slice(1):s.logs).slice(0,12).map(t=>`<li>${esc(t)}</li>`).join('')}</ol></details>`;
 
  const menu=menuOpen?`<div class="scrim" data-close-menu></div><div class="menu card" role="menu">
    <button class="menu-item" data-share role="menuitem">招待URLを共有</button>
@@ -319,6 +327,73 @@ function renderHighLow(s){
  </aside></div><footer class="foot">あつまる卓 · 集まって、囲んで、盛り上がる。</footer>`;
  if(fresh)hlAnimated=last.round;
 }
+// ---------- ことばならべ ----------
+let kbDraft={key:'',text:''},kbComposing=false;
+const KB_PHASE={lobby:'メンバー募集中',express:'表現タイム',arrange:'並べ替え',reveal:'オープン',result:'結果'};
+function renderKotoba(s){
+ const kb=s.kb,me=s.players.find(p=>p.id===s.me),st=id=>kb.stats[id]||{lives:0,success:0,plays:0};
+ const url=new URL(base);url.searchParams.set('room',s.id);
+ const open=['lobby','result'].includes(kb.phase),mine=kb.cards.find(c=>c.id===s.me),playing=mine&&!mine.excluded&&!open;
+ const byId=id=>kb.cards.find(c=>c.id===id),person=id=>s.players.find(p=>p.id===id);
+ const scale=kb.theme?`<div class="kb-scale"><span><b>1</b>${esc(kb.theme.low)}</span><i></i><span>${esc(kb.theme.high)}<b>100</b></span></div>`:'';
+ const themeCard=kb.theme&&!open?`<div class="kb-theme"><p class="eyebrow">第${kb.round}回のお題</p><h2>${esc(kb.theme.text)}</h2>${scale}</div>`:'';
+ const timer=`<div class="timer" id="timer" ${s.timer?'':'hidden'}><div class="timer-caption"><span id="timer-label"></span><strong id="timer-seconds"></strong></div><div class="timer-track" role="progressbar" aria-label="残り時間" aria-valuemin="0" aria-valuemax="100"><div id="timer-fill"></div></div></div>`;
+ let stage='';
+ if(kb.phase==='express'){
+  const key=`${s.id}:${kb.round}:${kb.theme?.text}`;if(kbDraft.key!==key)kbDraft={key,text:mine?.word||''};
+  const status=kb.cards.map(c=>`<li>${avatar(person(c.id)||{id:c.id,name:c.name},'sm')}<span class="name">${esc(c.name)}${c.id===s.me?'<small class="you">あなた</small>':''}</span>${c.word===null?'<span class="tag">考え中…</span>':'<span class="tag want">出した</span>'}</li>`).join('');
+  stage=`<section class="card stage kb-stage">${themeCard}${timer}
+   ${playing?`<div class="kb-mine"><div class="kb-number" aria-label="あなたの数字">${mine.number}</div><form id="kb-form" class="kb-form"><label class="field"><span>あなたの数字を表す言葉（20文字まで）</span><input id="kb-word" maxlength="20" autocomplete="off" enterkeyhint="send" placeholder="例：ライオン"></label><button class="btn primary big" type="submit">${mine.word?'言葉を出し直す':'この言葉で出す'}</button>${mine.word?`<p class="note center">出した言葉：<b>${esc(mine.word)}</b>（30秒以内なら出し直せます）</p>`:'<p class="note center">30秒以内に出さないと、このゲームから外れます</p>'}</form></div>`
+   :s.isHost?`<div class="kb-host-note"><p>参加者が言葉を考えています。言葉がそろうと並べ替えに進みます。</p><button class="btn" id="kb-retheme">お題を引き直す（30秒リセット）</button></div>`
+   :`<p class="note center">参加者が言葉を考えています</p>`}
+   <ul class="kb-status">${status}</ul></section>`;
+ } else if(['arrange','reveal'].includes(kb.phase)||(kb.phase==='result'&&kb.result&&!kb.result.void)){
+  const order=kb.order,arrange=kb.phase==='arrange'&&s.isHost,result=kb.phase==='result';
+  let maxSoFar=0;
+  const rows=order.map((id,i)=>{
+   const c=byId(id),revealed=i<kb.revealed,num=c.number,broke=revealed&&num!==null&&num<maxSoFar;if(revealed&&num!==null)maxSoFar=Math.max(maxSoFar,num);
+   const rr=result?kb.result.rows.find(x=>x.id===id):null;
+   const badge=revealed&&num!==null?`<span class="kb-num ${rr?(rr.ok?'ok':'ng'):broke?'ng':''}">${num}</span>`:c.id===s.me&&num!==null?`<span class="kb-num own" title="あなたの数字">${num}</span>`:'<span class="kb-num back">?</span>';
+   return `<li class="kb-card ${arrange?'drag':''} ${revealed?'open':''} ${revealed&&i===kb.revealed-1&&kb.phase==='reveal'?'just':''} ${c.id===s.me?'me':''} ${rr?(rr.ok?'ok':'ng'):broke?'ng':''}" data-kb-id="${id}" ${arrange?`tabindex="0" aria-label="${i+1}番目 ${esc(c.word)}（${esc(c.name)}）。上下キーで移動"`:''}><div class="kb-body"><small>${esc(c.name)}${c.id===s.me?'（あなた）':''}</small><strong>${esc(c.word)}</strong></div>${badge}</li>`}).join('');
+  const out=kb.cards.filter(c=>c.excluded);
+  const summary=result?`<div class="kb-summary ${kb.result.correct===kb.result.total?'perfect':''}"><strong>${kb.result.correct===kb.result.total?'全員成功！':`${kb.result.correct} / ${kb.result.total} 枚が正しい位置`}</strong><span>正しい位置だった人の成功数が増えました</span></div>`:'';
+  stage=`<section class="card stage kb-stage">${themeCard||(result&&kb.theme?`<div class="kb-theme"><p class="eyebrow">第${kb.round}回のお題</p><h2>${esc(kb.theme.text)}</h2>${scale}</div>`:'')}${summary}
+   <ol class="kb-line" aria-label="小さい順の並び"><li class="kb-end">小さい（1）</li>${rows}<li class="kb-end">大きい（100）</li></ol>
+   ${out.length?`<p class="note center">時間切れで除外：${out.map(c=>esc(c.name)).join('、')}</p>`:''}
+   ${arrange?`<button class="btn primary big" id="kb-reveal">並びを決めてオープン</button><p class="note center">パネルをドラッグして並べ替え（時間制限なし）</p>`
+    :kb.phase==='arrange'?'<p class="note center">配信者が並べ替え中。動きはリアルタイムで見えます</p>'
+    :kb.phase==='reveal'&&s.isHost?`<button class="btn primary big" id="kb-reveal">次をめくる（${kb.revealed}/${order.length}）</button>`
+    :kb.phase==='reveal'?`<p class="note center">オープン中（${kb.revealed}/${order.length}）</p>`:''}
+  </section>`;
+ }
+ const voidNote=kb.phase==='result'&&kb.result?.void?'<section class="card kb-void"><h2>不成立</h2><p class="note">言葉を出したのが1人以下だったため、このゲームは不成立です。言葉を出した人のライフは戻しました。</p></section>':'';
+ const sel=kb.selected.map(person).filter(Boolean);
+ const lobby=open?`<section class="card table-preview"><div class="card-head"><h2>参加者</h2><span>${sel.length}/8人 · 配信者は並べ係</span></div>
+   <div class="seat-dots kb-dots">${Array.from({length:8},(_,i)=>{const p=sel[i];return p?`<div class="dot">${avatar(p,'lg')}<span>${esc(p.name)}</span><small>ライフ ${st(p.id).lives}</small></div>`:'<div class="dot empty"><span class="avatar lg ghost">?</span><span>空き</span></div>'}).join('')}</div>
+   ${s.isHost?`<button class="btn ${sel.length>=2?'primary':''} big" id="kb-start" ${sel.length<2?'disabled':''}>${sel.length<2?'参加者を2人以上指名してね':`${sel.length}人で${kb.round?'次のゲーム':'ゲームスタート'}`}</button><p class="note center kb-lifenote">始めると参加者のライフが1ずつ減ります</p>`
+   :`<div class="spectate"><p>${kb.selected.includes(me.id)?'<strong>指名されました！</strong> 配信者のスタートを待っています':me.want?'参加希望を出しています':'観戦中。遊びたくなったら参加希望を出そう'} · ライフ ${st(me.id).lives} · 成功 ${st(me.id).success}回</p>${wantButton(me)}</div>`}</section>`:'';
+ const invite=open&&s.isHost?`<section class="card invite"><p>リスナーにこのURLを送ってね</p><div class="invite-row"><code>${esc(url.host+url.pathname+url.search)}</code><button class="btn" data-share>共有</button></div></section>`:'';
+ const members=[...s.players].sort((a,b)=>(b.id===s.hostId)-(a.id===s.hostId)||kb.selected.includes(b.id)-kb.selected.includes(a.id)||(b.want&&!b.demo)-(a.want&&!a.demo)||st(b.id).success-st(a.id).success).map(p=>{
+   const isHost=p.id===s.hostId,picked=kb.selected.includes(p.id),fresh=Date.now()-(firstSeen.get(p.id)||0)<8000,t=st(p.id);
+   const inPlay=!open&&kb.cards.some(c=>c.id===p.id&&!c.excluded);
+   const tag=isHost?'<span class="tag gold">並べ係</span>':inPlay?'<span class="tag gold">参加中</span>':picked?'<span class="tag gold">指名中</span>':p.demo?'<span class="tag">CPU</span>':p.want?'<span class="tag want">参加希望</span>':'<span class="tag">観戦中</span>';
+   const canPick=s.isHost&&open&&!isHost&&!p.demo;
+   return `<li class="member ${picked?'seated':''}"><div class="member-row">${avatar(p)}<div class="member-main"><strong>${esc(p.name)}${p.id===s.me?'<small class="you">あなた</small>':''}</strong><span>${tag}${fresh?'<span class="tag new">NEW</span>':''}${!p.online?'<span class="tag offline">接続待ち</span>':''}${isHost||p.demo?'':`<span class="tag life">ライフ ${t.lives}</span><span class="tag">成功 ${t.success}</span>`}</span></div>
+    ${s.isHost&&!isHost&&!p.demo?`<button class="btn sm ${editing===p.id?'active':''}" data-edit="${p.id}" aria-expanded="${editing===p.id}" aria-label="${esc(p.name)}のライフを調整">ライフ</button>`:''}
+    ${canPick?`<button class="btn sm ${picked?'':'pick'}" data-kb-select="${p.id}" ${!picked&&(!p.want||t.lives<1||sel.length>=8)?'disabled':''}>${picked?'外す':'指名'}</button>`:''}</div>
+    ${s.isHost&&editing===p.id?`<div class="points-editor three" role="group" aria-label="${esc(p.name)}のライフ">${[[1,'+1'],[5,'+5'],[-1,'−1']].map(([d,l])=>`<button class="btn ${d>0?'plus':'minus'}" data-kb-lives="${p.id}" data-delta="${d}">${l}</button>`).join('')}</div>`:''}</li>`}).join('');
+ const rules=`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>ことばならべ</span></div><ol class="kb-rules"><li>指名された参加者に、1〜100の数字が1枚ずつこっそり配られる（配信者は並べ係）</li><li>お題に沿って、自分の数字の大きさを表す言葉を<b>30秒以内</b>に出す。出さなかった人は除外</li><li>言葉だけを手がかりに、<b>配信者だけ</b>が小さい順に並べる（時間制限なし）</li><li>配信者が1枚ずつめくる。<b>正しい位置</b>だった人は成功数+1</li></ol><p class="note">参加するとライフが1減る。ライフは配信者が足す。数字は本人にしか見えない。</p></section>`;
+ const menu=menuOpen?`<div class="scrim" data-close-menu></div><div class="menu card" role="menu"><button class="menu-item" data-share role="menuitem">招待URLを共有</button>${s.isHost&&kb.phase==='result'?'<button class="menu-item" id="kb-reset" role="menuitem">結果を閉じて待機所へ</button>':''}<a class="menu-item" href="./" role="menuitem">トップへ（部屋はそのまま）</a></div>`:'';
+ app.innerHTML=`<header class="topbar"><a class="brand" href="./">${icon('mark')}<span>あつまる卓</span></a><div class="top-actions"><button class="icon-btn" data-share aria-label="招待URLを共有">${icon('share')}</button><button class="icon-btn ${menuOpen?'active':''}" data-menu aria-label="メニュー" aria-expanded="${menuOpen}">${icon('menu')}</button></div></header>${menu}
+ <section class="room-head"><div class="chips"><span class="room-id">ROOM ${esc(s.id)}</span><span class="phase ${open?'':'live'}">${KB_PHASE[kb.phase]}</span><span class="counts">入室 ${s.players.filter(p=>p.online&&!p.demo).length}${kb.cards.length&&!open?` · 参加 ${kb.cards.filter(c=>!c.excluded).length}`:''}</span></div>
+  <h1>${esc(s.title)}</h1><p>ことばならべ${kb.round?` · 第${kb.round}回`:''}${s.isHost?' · あなたが並べ係':''}</p></section>
+ <div class="layout"><div class="main-col">${stage}${voidNote}${rules}${lobby}${invite}</div><aside class="side-col">
+  <section class="card members"><div class="card-head"><h2>入室中 <span class="count">${s.players.length}</span></h2><span>${s.isHost&&open?'参加希望の人を指名':'ライフと成功数'}</span></div><ul>${members}</ul></section>
+  <details class="card log" id="log" ${logOpen?'open':''}><summary>卓のできごと</summary><ol>${s.logs.slice(0,12).map(t=>`<li>${esc(t)}</li>`).join('')}</ol></details>
+ </aside></div><footer class="foot">あつまる卓 · 集まって、囲んで、盛り上がる。</footer>`;
+ const input=$('#kb-word');if(input){input.value=kbDraft.text}
+ updateTimer();
+}
 function wantButton(me){return `<button class="btn ${me.want?'':'primary'} big" data-want="${me.want?'0':'1'}">${me.want?'参加希望を取り消す':'参加希望を出す'}</button>`}
 
 // ---------- events (delegated; CSP-safe) ----------
@@ -333,6 +408,12 @@ app.addEventListener('click',async e=>{
  if('points' in d)return action({type:'points',id:d.points,delta:Number(d.delta)});
  if('select' in d)return action({type:'select',id:d.select});
  if('want' in d)return action({type:'want',value:d.want==='1'});
+ if('kbSelect' in d)return action({type:'kb-select',id:d.kbSelect});
+ if('kbLives' in d)return action({type:'kb-lives',id:d.kbLives,delta:Number(d.delta)});
+ if(t.id==='kb-start')return action({type:'kb-start'});
+ if(t.id==='kb-retheme')return action({type:'kb-retheme'});
+ if(t.id==='kb-reveal'){t.disabled=true;return action({type:'kb-reveal'})}
+ if(t.id==='kb-reset'){menuOpen=false;return action({type:'kb-reset'})}
  if('hlPick' in d){hlDraft.pick=d.hlPick;last='';render();return}
  if('hlColor' in d){hlDraft.color=d.hlColor||null;last='';render();return}
  if('hlAmt' in d){hlDraft.amount=Number(d.hlAmt);last='';render();return}
@@ -345,8 +426,39 @@ app.addEventListener('click',async e=>{
  if(t.id==='roll-loaded'){t.disabled=true;return action({type:'roll',loaded:true})}
  if('accuse' in d){if(!confirm(`イカサマを指摘しますか？\nゲームはその場で不成立になり、判定タイムに入ります。\n\n当たり：親から +${Number(d.gain).toLocaleString('ja-JP')}点\n外れ：あなたが −${Number(d.loss).toLocaleString('ja-JP')}点（ほかの子と親に支払い）`))return;t.disabled=true;return action({type:'accuse'})}
 });
-app.addEventListener('submit',e=>{if(e.target.id==='hl-form'&&state&&hlDraft){e.preventDefault();action({type:'hl-bet',pick:hlDraft.pick,color:hlDraft.color,amount:hlDraft.amount});return}
+app.addEventListener('submit',e=>{if(e.target.id==='kb-form'&&state){e.preventDefault();const w=$('#kb-word')?.value.trim();if(!w){toast('言葉を入力してね');return}kbDraft.text=w;$('#kb-word').blur();action({type:'kb-word',word:w});return}
+ if(e.target.id==='hl-form'&&state&&hlDraft){e.preventDefault();action({type:'hl-bet',pick:hlDraft.pick,color:hlDraft.color,amount:hlDraft.amount});return}
  if(e.target.id!=='bet-form'||!state)return;e.preventDefault();const s=state,me=s.players.find(p=>p.id===s.me);const maxBet=Math.max(100,Math.floor((me.points??0)/100)*100);const amount=me.ready?me.bet:Math.max(100,Math.min(maxBet,Number(betDrafts[`${s.id}:${s.gameNumber}:${s.round}`]??me.bet??100)));action({type:'bet',amount,ready:!me.ready})});
+app.addEventListener('input',e=>{if(e.target.id==='kb-word'){kbDraft.text=e.target.value}});
+app.addEventListener('compositionstart',e=>{if(e.target.id==='kb-word')kbComposing=true});
+app.addEventListener('compositionend',e=>{if(e.target.id==='kb-word'){kbComposing=false;kbDraft.text=e.target.value}});
+// ---- ことばならべ: drag to reorder (host only) ----
+let kbDrag=null;
+function kbCommit(order){if(!state?.kb)return;state.kb.order=order;last='';render();action({type:'kb-move',order})}
+app.addEventListener('pointerdown',e=>{
+ const li=e.target.closest('.kb-card.drag');if(!li||e.button>0)return;
+ const list=li.parentElement,cards=[...list.querySelectorAll('.kb-card')],from=cards.indexOf(li);
+ kbDrag={li,cards,from,to:from,startY:e.clientY,h:li.getBoundingClientRect().height+6,id:e.pointerId};
+ li.setPointerCapture(e.pointerId);li.classList.add('dragging');
+});
+app.addEventListener('pointermove',e=>{
+ const d=kbDrag;if(!d||e.pointerId!==d.id)return;e.preventDefault();
+ const dy=e.clientY-d.startY;d.li.style.transform=`translateY(${dy}px)`;
+ d.to=Math.max(0,Math.min(d.cards.length-1,d.from+Math.round(dy/d.h)));
+ d.cards.forEach((c,i)=>{if(c===d.li)return;const shift=d.from<d.to&&i>d.from&&i<=d.to?-d.h:d.from>d.to&&i<d.from&&i>=d.to?d.h:0;c.style.transform=shift?`translateY(${shift}px)`:''});
+});
+function kbDrop(e){
+ const d=kbDrag;if(!d||e.pointerId!==d.id)return;kbDrag=null;
+ d.cards.forEach(c=>{c.style.transform='';c.classList.remove('dragging')});
+ if(d.to===d.from){last='';render();return}
+ const order=[...state.kb.order],[moved]=order.splice(d.from,1);order.splice(d.to,0,moved);kbCommit(order);
+}
+app.addEventListener('pointerup',kbDrop);app.addEventListener('pointercancel',kbDrop);
+app.addEventListener('keydown',e=>{
+ const li=e.target.closest?.('.kb-card.drag');if(!li||!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();
+ const order=[...state.kb.order],i=order.indexOf(li.dataset.kbId),j=i+(e.key==='ArrowUp'?-1:1);if(j<0||j>=order.length)return;
+ [order[i],order[j]]=[order[j],order[i]];kbCommit(order);requestAnimationFrame(()=>document.querySelector(`.kb-card[data-kb-id="${order[j]}"]`)?.focus());
+});
 app.addEventListener('toggle',e=>{if(e.target.id==='log')logOpen=e.target.open},true);
 
 async function action(data){if(busy)return;busy=true;try{state=await api(`rooms/${state.id}/action`,data);trackPlayers(state);last='';render()}catch(e){toast(e.message);last='';if(state)render()}finally{busy=false}}
@@ -368,7 +480,7 @@ function updateTimer(){
  const n=now(),remaining=Math.max(0,t.end-n),ratio=Math.min(1,remaining/t.total);
  fill.style.transform=`scaleX(${ratio})`;
  $('#timer-seconds').textContent=`${Math.ceil(Math.min(t.total,remaining)/1000)}秒`;
- $('#timer-label').textContent=n<t.start?'転がっています…':t.kind==='judge'?'判定まで':t.kind==='bet'?'時間切れで100点に確定':t.kind==='roll'?'時間切れで自動で振ります':'自動で次へ進みます';
+ $('#timer-label').textContent=n<t.start?'転がっています…':t.kind==='express'?'言葉を出すまで':t.kind==='judge'?'判定まで':t.kind==='bet'?'時間切れで100点に確定':t.kind==='roll'?'時間切れで自動で振ります':'自動で次へ進みます';
  $('.timer-track')?.setAttribute('aria-valuenow',String(Math.round(ratio*100)));
  $('#timer')?.classList.toggle('urgent',remaining<=5000);
 }
