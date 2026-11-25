@@ -342,9 +342,13 @@ function renderKotoba(s){
  if(kb.phase==='express'){
   const key=`${s.id}:${kb.round}:${kb.theme?.text}`;if(kbDraft.key!==key)kbDraft={key,text:mine?.word||''};
   const status=kb.cards.map(c=>`<li>${avatar(person(c.id)||{id:c.id,name:c.name},'sm')}<span class="name">${esc(c.name)}${c.id===s.me?'<small class="you">あなた</small>':''}</span>${c.word===null?'<span class="tag">考え中…</span>':'<span class="tag want">出した</span>'}</li>`).join('');
-  stage=`<section class="card stage kb-stage">${themeCard}${timer}
-   ${playing?`<div class="kb-mine"><div class="kb-number" aria-label="あなたの数字">${mine.number}</div><form id="kb-form" class="kb-form"><label class="field"><span>あなたの数字を表す言葉（20文字まで）</span><input id="kb-word" maxlength="20" autocomplete="off" enterkeyhint="send" placeholder="例：ライオン"></label><button class="btn primary big" type="submit">${mine.word?'言葉を出し直す':'この言葉で出す'}</button>${mine.word?`<p class="note center">出した言葉：<b>${esc(mine.word)}</b>（30秒以内なら出し直せます）</p>`:'<p class="note center">30秒以内に出さないと、このゲームから外れます</p>'}</form></div>`
-   :s.isHost?`<div class="kb-host-note"><p>参加者が言葉を考えています。言葉がそろうと並べ替えに進みます。</p><button class="btn" id="kb-retheme">お題を引き直す（30秒リセット）</button></div>`
+  // participants: theme sits right above the input so both stay in view with the keyboard open
+  stage=playing?`<section class="card stage kb-stage" id="kb-stage"><form id="kb-form" class="kb-compose">${themeCard}
+   <div class="kb-input-row"><div class="kb-number" aria-label="あなたの数字">${mine.number}</div><label class="field"><span>あなたの数字を表す言葉（20文字まで）</span><input id="kb-word" maxlength="20" autocomplete="off" enterkeyhint="send" placeholder="例：ライオン"></label></div>
+   <button class="btn primary big" type="submit">${mine.word?'言葉を出し直す':'この言葉で出す'}</button>${mine.word?`<p class="note center">出した言葉：<b>${esc(mine.word)}</b>（45秒以内なら出し直せます）</p>`:'<p class="note center">45秒以内に出さないと、このゲームから外れます</p>'}</form>${timer}
+   <ul class="kb-status">${status}</ul></section>`
+  :`<section class="card stage kb-stage">${themeCard}${timer}
+   ${s.isHost?`<div class="kb-host-note"><p>参加者が言葉を考えています。言葉がそろうと並べ替えに進みます。</p><button class="btn" id="kb-retheme">お題を引き直す（45秒リセット）</button></div>`
    :`<p class="note center">参加者が言葉を考えています</p>`}
    <ul class="kb-status">${status}</ul></section>`;
  } else if(['arrange','reveal'].includes(kb.phase)||(kb.phase==='result'&&kb.result&&!kb.result.void)){
@@ -382,7 +386,7 @@ function renderKotoba(s){
     ${s.isHost&&!isHost&&!p.demo?`<button class="btn sm ${editing===p.id?'active':''}" data-edit="${p.id}" aria-expanded="${editing===p.id}" aria-label="${esc(p.name)}のライフを調整">ライフ</button>`:''}
     ${canPick?`<button class="btn sm ${picked?'':'pick'}" data-kb-select="${p.id}" ${!picked&&(!p.want||t.lives<1||sel.length>=8)?'disabled':''}>${picked?'外す':'指名'}</button>`:''}</div>
     ${s.isHost&&editing===p.id?`<div class="points-editor three" role="group" aria-label="${esc(p.name)}のライフ">${[[1,'+1'],[5,'+5'],[-1,'−1']].map(([d,l])=>`<button class="btn ${d>0?'plus':'minus'}" data-kb-lives="${p.id}" data-delta="${d}">${l}</button>`).join('')}</div>`:''}</li>`}).join('');
- const rules=`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>ことばならべ</span></div><ol class="kb-rules"><li>指名された参加者に、1〜100の数字が1枚ずつこっそり配られる（配信者は並べ係）</li><li>お題に沿って、自分の数字の大きさを表す言葉を<b>30秒以内</b>に出す。出さなかった人は除外</li><li>言葉だけを手がかりに、<b>配信者だけ</b>が上ほど大きくなるように並べる（時間制限なし）</li><li>配信者が1枚ずつめくる。<b>正しい位置</b>だった人は成功数+1</li></ol><p class="note">参加するとライフが1減る。ライフは配信者が足す。数字は本人にしか見えない。</p></section>`;
+ const rules=`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>ことばならべ</span></div><ol class="kb-rules"><li>指名された参加者に、1〜100の数字が1枚ずつこっそり配られる（配信者は並べ係）</li><li>お題に沿って、自分の数字の大きさを表す言葉を<b>45秒以内</b>に出す。出さなかった人は除外</li><li>言葉だけを手がかりに、<b>配信者だけ</b>が上ほど大きくなるように並べる（時間制限なし）</li><li>配信者が1枚ずつめくる。<b>正しい位置</b>だった人は成功数+1</li></ol><p class="note">参加するとライフが1減る。ライフは配信者が足す。数字は本人にしか見えない。</p></section>`;
  const menu=menuOpen?`<div class="scrim" data-close-menu></div><div class="menu card" role="menu"><button class="menu-item" data-share role="menuitem">招待URLを共有</button>${s.isHost&&kb.phase==='result'?'<button class="menu-item" id="kb-reset" role="menuitem">結果を閉じて待機所へ</button>':''}<a class="menu-item" href="./" role="menuitem">トップへ（部屋はそのまま）</a></div>`:'';
  app.innerHTML=`<header class="topbar"><a class="brand" href="./">${icon('mark')}<span>あつまる卓</span></a><div class="top-actions"><button class="icon-btn" data-share aria-label="招待URLを共有">${icon('share')}</button><button class="icon-btn ${menuOpen?'active':''}" data-menu aria-label="メニュー" aria-expanded="${menuOpen}">${icon('menu')}</button></div></header>${menu}
  <section class="room-head"><div class="chips"><span class="room-id">ROOM ${esc(s.id)}</span><span class="phase ${open?'':'live'}">${KB_PHASE[kb.phase]}</span><span class="counts">入室 ${s.players.filter(p=>p.online&&!p.demo).length}${kb.cards.length&&!open?` · 参加 ${kb.cards.filter(c=>!c.excluded).length}`:''}</span></div>
@@ -460,6 +464,8 @@ app.addEventListener('submit',e=>{if(e.target.id==='kb-form'&&state){e.preventDe
  if(e.target.id==='hl-form'&&state&&hlDraft){e.preventDefault();action({type:'hl-bet',pick:hlDraft.pick,color:hlDraft.color,amount:hlDraft.amount});return}
  if(e.target.id!=='bet-form'||!state)return;e.preventDefault();const s=state,me=s.players.find(p=>p.id===s.me);const maxBet=Math.max(100,Math.floor((me.points??0)/100)*100);const amount=me.ready?me.bet:Math.max(100,Math.min(maxBet,Number(betDrafts[`${s.id}:${s.gameNumber}:${s.round}`]??me.bet??100)));action({type:'bet',amount,ready:!me.ready})});
 app.addEventListener('input',e=>{if(e.target.id==='kb-word'){kbDraft.text=e.target.value}});
+// keep the theme in view above the keyboard while typing
+app.addEventListener('focusin',e=>{if(e.target.id==='kb-word')setTimeout(()=>$('#kb-stage')?.scrollIntoView({block:'start',behavior:'smooth'}),250)});
 app.addEventListener('compositionstart',e=>{if(e.target.id==='kb-word')kbComposing=true});
 app.addEventListener('compositionend',e=>{if(e.target.id==='kb-word'){kbComposing=false;kbDraft.text=e.target.value}});
 // ---- ことばならべ: drag to reorder (host only) ----

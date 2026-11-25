@@ -1,7 +1,7 @@
 // ことばならべ: everyone but the host gets a secret 1〜100, describes it in words for a theme,
 // and the host alone arranges the words from small to large, then turns them over one by one.
 export const KB_GAME='kotoba';
-export const KB_EXPRESS_MS=30000;
+export const KB_EXPRESS_MS=45000;
 export const KB_MAX=8;
 export const THEMES=[
  ['強そうな動物','弱そう','強そう'],['朝ごはんに出てきたらうれしいもの','うれしくない','うれしい'],['夏休みにやりたいこと','やりたくない','やりたい'],

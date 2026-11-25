@@ -18,7 +18,7 @@ test('ことばならべ：ライフがないと指名できず、参加でラ�
   assert.equal(r.kb.phase,'express');assert.ok(r.kb.theme.text);
   assert.equal(new Set(r.kb.cards.map(c=>c.number)).size,2);
 });
-test('ことばならべ：数字は本人だけ、言葉は表現中は伏せる。30秒で未回答は除外',()=>{
+test('ことばならべ：数字は本人だけ、言葉は表現中は伏せる。45秒で未回答は除外',()=>{
   const r=room(3);for(const id of ['p0','p1','p2']){kbLives(r,id,1);kbSelect(r,id)}
   kbStart(r,0);kbWord(r,r.players.get('p0'),'  ライオン ');
   const s0=kbState(r,r.players.get('p0')),s1=kbState(r,r.players.get('p1')),sh=kbState(r,r.host);
@@ -53,5 +53,5 @@ test('ことばならべ：残り1人以下は不成立でライフを戻す。�
   kbWord(r,r.players.get('p0'),'b');
   assert.equal(kbTick(r,5+KB_EXPRESS_MS),'void');
   assert.equal(r.players.get('p0').lives,1);assert.equal(r.players.get('p1').lives,0);
-  assert.equal(THEMES.length>=60,true);
+  assert.equal(THEMES.length>=60,true);assert.equal(KB_EXPRESS_MS,45000);
 });

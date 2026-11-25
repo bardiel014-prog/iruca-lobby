@@ -410,3 +410,9 @@ div.game-row{cursor:default}
 .intro-card h2{margin:0;font-family:var(--serif);font-size:24px}
 .intro-card ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.7}
 .intro-card li::marker{color:var(--gold)}
+.kb-stage{scroll-margin-top:calc(64px + env(safe-area-inset-top))}
+.kb-compose{display:flex;flex-direction:column;gap:12px}
+.kb-input-row{display:flex;align-items:flex-end;gap:10px}
+.kb-input-row .field{flex:1;min-width:0}
+.kb-input-row .kb-number{flex-shrink:0;width:64px;height:84px;font-size:32px;border-radius:9px;box-shadow:0 8px 18px rgba(0,0,0,.4)}
+.kb-compose .kb-theme h2{font-size:23px}

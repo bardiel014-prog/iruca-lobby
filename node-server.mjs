@@ -150,7 +150,7 @@ export const server = http.createServer(async (req, res) => {
       } else if(b.type==='kb-lives') {
         const p=kbLives(r,b.id,b.delta);log(r,`${p.name}：ライフ ${b.delta>0?'+':''}${b.delta}（残り${p.lives}）`);
       } else if(b.type==='kb-start') {
-        kbStart(r);log(r,`第${r.kb.round}回：お題「${r.kb.theme.text}」。30秒で言葉を出してね`);
+        kbStart(r);log(r,`第${r.kb.round}回：お題「${r.kb.theme.text}」。45秒で言葉を出してね`);
       } else if(b.type==='kb-retheme') {
         kbRetheme(r);log(r,`お題を引き直し：「${r.kb.theme.text}」`);
       } else if(b.type==='kb-word') {
