@@ -76,7 +76,7 @@ const GAME_ICONS={
 };
 // Families shown top to bottom. Add a new game here (and in games.js) to grow the menu.
 const GAME_MENU=[
- {key:'chinchiro',name:'チンチロ',icon:'dice',desc:'サイコロ3つの役で勝負。配信者が指名した最大4人で卓を囲む。',variants:[['chinchiro-rotation','親回り','全員が1回ずつ親'],['chinchiro-fixed','親固定','配信者がずっと親・1回'],['chinchiro-cheat','イカサマあり','親固定・シゴロ賽OK']]},
+ {key:'chinchiro',name:'チンチロ',icon:'dice',desc:'サイコロ3つの役で勝負。配信者が指名した最大4人で卓を囲む。',variants:[['chinchiro-rotation','親回り','全員が1回ずつ親'],['chinchiro-fixed','親固定','配信者がずっと親・1回'],['chinchiro-cheat','班長','親固定・シゴロ賽あり']]},
  {key:'kotoba',name:'ことばならべ',icon:'line',desc:'数字は言わずに、お題に沿った言葉だけで大きさ順に並べる協力ゲーム。最大8人、並べるのは配信者。',variants:[['kotoba','','']]},
  {key:'hitokoto',name:'ひとこと演技',icon:'voice',desc:'配信者がひとことを演じ、リスナーは6つの場面のどれかを伏せて当てる。入室中の全員が参加。',variants:[['hitokoto','','']]},
  {key:'highlow',name:'ハイ＆ロー',icon:'card',desc:'配信者がカードをめくり、入室中のリスナー全員が次のカードに賭ける。',variants:[['highlow','ノーマル','シンプルな絵札'],['highlow-bunny','バニー','絵札がバニーのイラスト']]}
@@ -95,7 +95,7 @@ function rulesHtml(kind,fixed){
   ?`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>ひとこと演技</span></div><ol class="note"><li>配信者にだけ、ひとことと6つの場面のうち<b>担当の1つ</b>が見えます。</li><li>配信者がその場面のつもりで、配信でひとことを演じます。</li><li>受付が始まったら、リスナーは<b>45秒以内</b>にどの場面かを1つ選びます。ほかの人の回答は締め切りまで見えません。</li><li>全員の回答と正解を同時に公開。正解数と正答率がたまっていきます。</li></ol></section>`
   :kind==='highlow'
   ?`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>ハイ＆ロー</span></div><div class="roles"><span>ハイ/ロー的中 <b>2倍戻り</b></span><span>同じ数字 <b>返却</b></span><span>はずれ <b>没収</b></span><span>色も的中 <b>さらに2倍</b></span><span>色はずれ <b>没収</b></span></div><p class="note">次のカードが今より上（ハイ）か下（ロー）かに、0点から100点単位で賭ける。色の予想は任意。Aが一番弱くKが一番強い。ハイかローを選べば0点でも参加、選ばなければ自動で「ステイ」（このカードは不参加）。配信者がめくるまでベットは変更・ステイに戻せる。<br>連勝：当たる（色を選んだら色も当たる）と+1、外れると0に戻る。ステイした回と、色なしで同じ数字だった回は数えない。</p></section>`
-  :kind==='cheat'?`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>チンチロ イカサマあり</span></div><div class="roles"><span>ピンゾロ <b>×5</b></span><span>ゾロ目 <b>×3</b></span><span>シゴロ <b>×2</b></span><span>出目 <b>×1</b></span><span>ヒフミ <b>2倍払い</b></span><span>目なし <b>3回まで</b></span></div><p class="note">配信者がずっと親。親は普通のサイコロか、4・5・6しか出ない「シゴロ賽」を選んで振れる。子はゲーム中いつでも「イカサマを指摘」でき、その時点でゲームは不成立になり判定タイムへ。<br>当たり：親が指摘した子に掛け金の10倍を払う。<br>外れ：指摘した子が、ほかの子それぞれに（自分の掛け金＋その子の掛け金）×2を払い、親にもその合計を払う。</p></section>`
+  :kind==='cheat'?`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>チンチロ 班長モード</span></div><div class="roles"><span>ピンゾロ <b>×5</b></span><span>ゾロ目 <b>×3</b></span><span>シゴロ <b>×2</b></span><span>出目 <b>×1</b></span><span>ヒフミ <b>2倍払い</b></span><span>目なし <b>3回まで</b></span></div><p class="note">配信者がずっと親。親は普通のサイコロか、4・5・6しか出ない「シゴロ賽」を選んで振れる。子はゲーム中いつでも「イカサマを指摘」でき、その時点でゲームは不成立になり判定タイムへ。<br>当たり：親が指摘した子に掛け金の10倍を払う。<br>外れ：指摘した子が、ほかの子それぞれに（自分の掛け金＋その子の掛け金）×2を払い、親にもその合計を払う。</p></section>`
   :`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>チンチロ ${fixed?'親固定':'親回り'}</span></div><div class="roles"><span>ピンゾロ <b>×5</b></span><span>ゾロ目 <b>×3</b></span><span>シゴロ <b>×2</b></span><span>出目 <b>×1</b></span><span>ヒフミ <b>2倍払い</b></span><span>目なし <b>3回まで</b></span></div><p class="note">${fixed?'配信者が親。子は配信者とだけ精算して1ゲーム。':'親と順番を抽選し、全員が親を務めたら1ゲーム。'}掛け金・投擲・次への進行はそれぞれ20秒で自動。0点以下でもゲーム中は100点で続行し、終了後にリスナーは待機所へ戻ります。</p></section>`;
 }
 const DEFAULT_TITLES={chinchiro:'今夜のチンチロ部屋','chinchiro-rotation':'今夜のチンチロ部屋','chinchiro-fixed':'今夜のチンチロ部屋',highlow:'今夜のハイ＆ロー','highlow-bunny':'今夜のハイ＆ロー',kotoba:'今夜のことばならべ',hitokoto:'今夜のひとこと演技'};
@@ -240,7 +240,7 @@ function render(){
 
  app.innerHTML=`<header class="topbar"><a class="brand" href="./">${icon('mark')}<span>あつまる卓</span></a><div class="top-actions"><button class="icon-btn" data-share aria-label="招待URLを共有">${icon('share')}</button><button class="icon-btn ${menuOpen?'active':''}" data-menu aria-label="メニュー" aria-expanded="${menuOpen}">${icon('menu')}</button></div></header>${menu}
  <section class="room-head"><div class="chips"><span class="room-id">ROOM ${esc(s.id)}</span><span class="phase ${locked?'live':''}">${phaseNames[s.phase]||s.phase}</span><span class="counts">入室 ${s.players.filter(p=>p.online&&!p.demo).length} · 観戦 ${watchers.filter(p=>p.online&&!p.demo).length}</span></div>
-  <h1>${esc(s.title)}</h1><p>${s.cheatMode?'親固定・イカサマあり':fixed?'親固定':'親回り'}${s.gameNumber?` · 第${s.gameNumber}ゲーム`:''}${locked&&!fixed?` · ${s.round}/${s.totalRounds}ラウンド`:''}${s.isHost?' · あなたが配信者':''}</p></section>
+  <h1>${esc(s.title)}</h1><p>${s.cheatMode?'班長モード':fixed?'親固定':'親回り'}${s.gameNumber?` · 第${s.gameNumber}ゲーム`:''}${locked&&!fixed?` · ${s.round}/${s.totalRounds}ラウンド`:''}${s.isHost?' · あなたが配信者':''}</p></section>
  <div class="layout"><div class="main-col">${result}${stage}${locked?lastLog:''}${seats}${rulesHtml(cheat?'cheat':'chinchiro',fixed)}${invite}${lobbySeats}</div><aside class="side-col">${waiting}${rules}</aside></div>
  <footer class="foot">あつまる卓 · 集まって、囲んで、盛り上がる。</footer>`;
  updateTimer();animateDice();
@@ -542,7 +542,7 @@ function introKind(s){return s.gameType==='hitokoto'?'hitokoto':s.gameType==='hi
 function showIntro(s){
  const host=s.isHost,kind=introKind(s),lines=INTRO[host?'host':'listener'][kind],me=s.players.find(p=>p.id===s.me);
  const canWant=!host&&['chinchiro','cheat','kotoba'].includes(kind)&&!me?.want;
- const names={chinchiro:'チンチロ',cheat:'チンチロ（イカサマあり）',highlow:'ハイ＆ロー',kotoba:'ことばならべ',hitokoto:'ひとこと演技'};
+ const names={chinchiro:'チンチロ',cheat:'チンチロ（班長モード）',highlow:'ハイ＆ロー',kotoba:'ことばならべ',hitokoto:'ひとこと演技'};
  const box=$('#intro');
  box.innerHTML=`<div class="intro-card card" role="dialog" aria-modal="true" aria-labelledby="intro-title"><p class="eyebrow">${host?'配信者のあなたへ':'ようこそ'}</p><h2 id="intro-title">${esc(names[kind])}</h2><ul>${lines.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
   ${canWant?'<button class="btn primary big" data-intro="want">参加希望を出して入る</button><button class="btn big" data-intro="watch">観戦で入る</button>':'<button class="btn primary big" data-intro="ok">OK</button>'}</div>`;

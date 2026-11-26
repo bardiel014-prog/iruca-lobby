@@ -308,12 +308,13 @@ div.game-row{cursor:default}
 .game-text{display:flex;flex-direction:column;gap:2px;min-width:0}
 .game-text strong{font-family:var(--serif);font-size:17px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .game-text small{font-size:12px;color:var(--muted);line-height:1.55}
-.variants{grid-column:2;display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
-.variant{position:relative;display:block;min-height:48px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.variants{grid-column:2;display:flex;flex-direction:column;gap:5px;margin-top:6px}
+.variant{position:relative;display:block;min-height:36px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .variant input{position:absolute;opacity:0;inset:0;cursor:pointer}
-.variant span{display:flex;flex-direction:column;justify-content:center;height:100%;padding:6px 10px;border:1px solid var(--line-2);border-radius:10px;background:var(--panel-2)}
-.variant b{font-size:14px}
-.variant small{font-size:11px;color:var(--muted)}
+.variant span{display:flex;align-items:center;gap:6px;height:100%;min-height:36px;padding:5px 10px;border:1px solid var(--line-2);border-radius:10px;background:var(--panel-2)}
+.variant b{font-size:14px;flex-shrink:0}
+.variant b::after{content:'|';margin-left:6px;font-weight:400;opacity:.45}
+.variant small{font-size:11.5px;color:var(--muted);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .variant input:checked+span,.variant.on span{border-color:var(--gold);background:var(--gold);color:var(--gold-ink)}
 .variant input:checked+span small,.variant.on span small{color:var(--gold-ink)}
 .variant input:focus-visible+span{outline:2px solid var(--gold);outline-offset:2px}
@@ -336,7 +337,7 @@ div.game-row{cursor:default}
 .hl-past .note{grid-column:1/-1}
 
 /* ---------- イカサマあり ---------- */
-.variants{grid-template-columns:repeat(auto-fit,minmax(92px,1fr))}
+
 .cheat-roll{display:flex;flex-direction:column;gap:8px}
 .btn.loaded{background:#2A1A1C;border-color:#A8434B;color:#F1B8B8}
 .btn.danger{background:transparent;border:1px solid var(--danger);color:#F1B8B8}

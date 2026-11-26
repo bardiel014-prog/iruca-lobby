@@ -33,7 +33,7 @@ const attr=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'
 // Link cards for X / Discord: crawlers do not run JS, so the server writes the tags into the page.
 function ogTags(r,id){
   const kind=!r?'default':r.gameType==='chinchiro-cheat'?'chinchiro-cheat':HL_GAMES.has(r.gameType)?'highlow':r.gameType==='kotoba'?'kotoba':r.gameType===HK_GAME?'hitokoto':'chinchiro';
-  const game={'chinchiro':'チンチロ','chinchiro-cheat':'イカサマチンチロ','highlow':'ハイ＆ロー','kotoba':'ことばならべ','hitokoto':'ひとこと演技'}[kind];
+  const game={'chinchiro':'チンチロ','chinchiro-cheat':'チンチロ（班長モード）','highlow':'ハイ＆ロー','kotoba':'ことばならべ','hitokoto':'ひとこと演技'}[kind];
   const title=r?`${r.host.name}の部屋で${game}を遊ぼう`:'あつまる卓 — 配信で、いっしょに。';
   const desc=r?`「${r.title}」に招待されています。URLを開いて名前を入れるだけで参加できます（登録なし）。`:'配信者とリスナーで遊べるゲーム。チンチロ・ハイ＆ロー・ことばならべ・ひとこと演技。URLを開くだけで参加・登録なし。';
   const url=PUBLIC_BASE+(r?`?room=${id}`:'');
