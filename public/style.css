@@ -266,7 +266,8 @@ main{max-width:1120px;margin:0 auto;padding:0 0 32px}
 @keyframes pop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.12)}100%{transform:none;opacity:1}}
 .hl-bet{display:flex;flex-direction:column;gap:10px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--sunk)}
 .seg{display:grid;gap:8px}
-.seg.pick{grid-template-columns:1fr 1fr}
+.seg.pick{grid-template-columns:1fr .78fr 1fr}
+.seg.pick button.stay b{font-size:17px}
 .seg.pick button{min-height:64px;border:1px solid var(--line-2);border-radius:12px;background:var(--panel-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
 .seg.pick b{font-family:var(--serif);font-size:22px}
 .seg.pick small{font-size:11px;color:var(--muted);font-weight:700}
@@ -416,3 +417,67 @@ div.game-row{cursor:default}
 .kb-input-row .field{flex:1;min-width:0}
 .kb-input-row .kb-number{flex-shrink:0;width:64px;height:84px;font-size:32px;border-radius:9px;box-shadow:0 8px 18px rgba(0,0,0,.4)}
 .kb-compose .kb-theme h2{font-size:23px}
+/* ---------- ひとこと演技 ---------- */
+.hk-stage{scroll-margin-top:calc(64px + env(safe-area-inset-top))}
+.hk-word{text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+.hk-word .eyebrow{margin:0}
+.hk-word h2{margin:0;font-family:var(--serif);font-size:40px;line-height:1.25;letter-spacing:.04em}
+.hk-brief{padding:12px 14px;border:1px solid rgba(217,183,106,.55);border-radius:12px;background:rgba(217,183,106,.08);font-size:14px;line-height:1.7}
+.hk-brief p{margin:0}.hk-brief b{color:var(--gold)}
+.hk-options{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.hk-opt{position:relative;overflow:hidden;width:100%;min-height:56px;display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line-2);border-radius:12px;background:rgba(255,255,255,.03);color:inherit;font:inherit;text-align:left}
+button.hk-opt{cursor:pointer}
+button.hk-opt:active{transform:scale(.98)}
+.hk-opt .let{flex-shrink:0;width:26px;height:26px;display:grid;place-items:center;border-radius:7px;background:rgba(255,255,255,.08);font-weight:800;font-size:13px}
+.hk-opt .txt{flex:1;min-width:0;font-size:13px;font-weight:700;line-height:1.35;position:relative;z-index:1}
+.hk-opt .cnt{flex-shrink:0;font-size:12px;font-weight:800;color:var(--muted);position:relative;z-index:1}
+.hk-opt .tag{position:absolute;right:6px;top:-1px;font-size:10px;padding:1px 6px}
+.hk-opt .bar{position:absolute;inset:0 auto 0 0;width:var(--w);background:rgba(255,255,255,.07);transition:width .6s ease}
+.hk-opt.on{border-color:var(--gold);background:rgba(217,183,106,.16)}
+.hk-opt.on .let{background:var(--gold);color:#17140c}
+.hk-opt.secret{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.hk-opt.secret .let{background:var(--gold);color:#17140c}
+.hk-opt.secret .bar{background:rgba(217,183,106,.28)}
+.hk-opt.mine::after{content:'あなた';position:absolute;right:6px;bottom:2px;font-size:9px;font-weight:800;color:var(--muted)}
+.hk-form{display:flex;flex-direction:column;gap:12px}
+.hk-count{text-align:center;font-size:14px;color:var(--muted);font-weight:700}.hk-count b{font-size:22px;color:var(--text,#fff)}
+.hk-verdict{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
+.hk-verdict strong{font-family:var(--serif);font-size:32px;color:var(--gold);letter-spacing:.06em;animation:pop .5s both}
+.hk-verdict.miss strong{color:var(--muted)}
+.hk-verdict span{font-size:13px;color:var(--muted);font-weight:700}
+.hk-verdict .mine{margin:6px 0 0;padding:6px 12px;border:1px solid var(--line-2);border-radius:999px;font-size:14px;font-weight:700}
+.hk-verdict .mine.up{border-color:rgba(143,209,158,.6)}.hk-verdict .mine.up b{color:var(--up)}
+.hk-verdict .mine.down{border-color:rgba(229,138,138,.6)}.hk-verdict .mine.down b{color:var(--down)}
+.hk-verdict .note{margin:4px 0 0}
+.hk-stats .hk-statrow{display:flex;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line);font-size:13px;color:var(--muted);font-weight:700;flex-wrap:wrap}
+.hk-statrow .who{flex:1;min-width:0;color:inherit}
+.hk-statrow b{color:var(--gold);font-size:16px;margin-left:2px}
+.hk-statrow.host{border-top:0}
+.hk-rank{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.hk-rank li{display:flex;align-items:center;gap:10px;min-height:40px;padding:4px 14px;font-size:13px;font-weight:700;border-top:1px solid var(--line)}
+.hk-rank li:first-child{border-top:0}
+.hk-rank li.me{background:rgba(217,183,106,.08)}
+.hk-rank .no{width:20px;color:var(--gold);font-family:var(--serif)}
+.hk-rank .name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hk-rank .pct{width:44px;text-align:right;color:var(--muted)}
+.hk-stats>.note{padding:0 14px 12px;margin:8px 0 0}
+.rules ol.note{margin:0;padding:12px 14px 8px 34px;line-height:1.7}
+.tag.streak{color:#17140c;background:linear-gradient(135deg,#F3D58A,var(--gold));border-color:transparent;font-weight:800}
+/* real card faces */
+.pcard .corner{letter-spacing:-.06em}
+.pcard .cpips{position:absolute;inset:16% 31%;font-family:var(--sans)}
+.pcard .pip{position:absolute;transform:translate(-50%,-50%);font-size:18px;line-height:1}
+.pcard .pip.down{transform:translate(-50%,-50%) rotate(180deg)}
+.pcard.lg .pip{font-size:21px}
+.pcard.sm .cpips{inset:17% 32%}.pcard.sm .pip{font-size:11px}
+.pcard.xs .corner i{display:none}
+.pcard.xs .cpips{inset:16% 22% 12% 40%}
+.pcard.xs .pip{font-size:8px}
+.pcard .suit.ace{font-size:58px}.pcard.lg .suit.ace{font-size:68px}.pcard.sm .suit.ace{font-size:34px}.pcard.xs .suit.ace{font-size:24px}
+.pcard .court-wrap{position:absolute;inset:11% 21%}
+.pcard.xs .court-wrap{inset:12% 10% 8% 34%}
+.pcard .court{width:100%;height:100%;display:block}
+.pcard .court text{font-family:var(--sans)}
+.pcard.art{overflow:hidden;background:#fff}
+.pcard .court-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.pcard.art .corner{display:none}

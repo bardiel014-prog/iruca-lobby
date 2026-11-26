@@ -4,6 +4,8 @@
 const SUITS=['S','H','D','C'];
 export const RED=new Set(['H','D']);
 export const HL_GAME='highlow';
+// 'highlow-bunny' is the same game with the illustrated J/Q/K deck
+export const HL_GAMES=new Set([HL_GAME,'highlow-bunny']);
 function uniform(n){const limit=Math.floor(4294967296/n)*n;let v;do{v=crypto.getRandomValues(new Uint32Array(1))[0]}while(v>=limit);return v%n}
 function reject(message,status=400){throw Object.assign(new Error(message),{status})}
 const balance=p=>p.points??1000;
@@ -57,9 +59,14 @@ export function hlFlip(r,players,at=Date.now()){
     const amount=Math.min(bet.amount,maxStake(p)),res=payout({...bet,amount},prev,next);
     p.points=balance(p)+res.delta;
     if(res.delta>0)p.hlWins=(p.hlWins||0)+1;
-    results.push({id,name:p.name,amount,pick:bet.pick,color:bet.color,...res,points:p.points});
+    // 連勝: a right call (high/low, and the colour if one was called) adds one, any miss resets to 0.
+    // Same rank without a colour call is neither. Rounds without a bet leave the count alone.
+    const won=(res.outcome==='hit'&&res.colorHit!==false)||(res.outcome==='tie'&&res.colorHit===true);
+    const lost=res.outcome==='miss'||res.colorHit===false;
+    if(won)p.hlStreak=(p.hlStreak||0)+1;else if(lost)p.hlStreak=0;
+    results.push({id,name:p.name,amount,pick:bet.pick,color:bet.color,...res,won,lost,streak:p.hlStreak||0,points:p.points});
   }
-  results.sort((a,b)=>b.delta-a.delta);
+  results.sort((a,b)=>b.delta-a.delta||b.won-a.won||a.lost-b.lost);
   hl.last={round:hl.round,prev,next,results,at};
   hl.history.push(next);hl.history=hl.history.slice(-12);
   hl.current=next;hl.round++;hl.bets={};
@@ -71,6 +78,7 @@ export function hlState(r,me){
   return {round:hl.round,current:hl.current,deckLeft:hl.deck.length,history:hl.history,last:hl.last,reshuffled:hl.reshuffled,
     myBet:hl.bets[me.id]||null,
     tally:{total:bets.length,high:count('high'),low:count('low'),red:count('red'),black:count('black'),stake:bets.reduce((s,[,b])=>s+b.amount,0)},
-    bets:bets.map(([id,b])=>({id,...b}))};
+    bets:bets.map(([id,b])=>({id,...b})),
+    streaks:Object.fromEntries([...r.players.values()].filter(p=>p.hlStreak).map(p=>[p.id,p.hlStreak]))};
 }
 export const cardLabel=c=>`${{S:'♠',H:'♥',D:'♦',C:'♣'}[c.suit]}${({1:'A',11:'J',12:'Q',13:'K'})[c.rank]||c.rank}`;

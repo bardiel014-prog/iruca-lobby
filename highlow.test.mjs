@@ -33,3 +33,17 @@ test('ハイ＆ロー：ベット・めくり・持ち点・山札の切り直�
   r.hl.deck=[];hlFlip(r,[host,a,z]);assert.equal(r.hl.reshuffled,true);assert.equal(r.hl.deck.length,50);
   assert.equal(new Set(freshDeck().map(x=>x.suit+x.rank)).size,52);
 });
+test('ハイ＆ロー：連勝は的中で+1、外れで0、ベットなし・同数（色なし）は据え置き',()=>{
+  const host={id:'h',points:3000},a={id:'a',points:1000},b={id:'b',points:1000};
+  const r={host,players:new Map([[a.id,a],[b.id,b]])};hlInit(r);
+  const flip=(next,bets)=>{for(const [p,x] of bets)hlBet(r,p,x);r.hl.deck.push(next);return hlFlip(r,[host,a,b])};
+  r.hl.current=c(7);
+  flip(c(9),[[a,{pick:'high',amount:100}],[b,{pick:'high',amount:0}]]);assert.equal(a.hlStreak,1);assert.equal(b.hlStreak,1,'0点ベットも数える');
+  flip(c(3),[[a,{pick:'low',amount:100}]]);assert.equal(a.hlStreak,2);assert.equal(b.hlStreak,1,'ベットなしは据え置き');
+  flip(c(3,'H'),[[a,{pick:'high',amount:100}]]);assert.equal(a.hlStreak,2,'同数・色なしは据え置き');
+  flip(c(3,'D'),[[a,{pick:'low',amount:100,color:'red'}]]);assert.equal(a.hlStreak,3,'同数でも色が当たれば勝ち');
+  assert.deepEqual(hlState(r,a).streaks,{a:3,b:1});
+  flip(c(10,'S'),[[a,{pick:'high',amount:100,color:'red'}]]);assert.equal(a.hlStreak,0,'色はずれで0');
+  flip(c(1),[[b,{pick:'high',amount:0}]]);assert.equal(b.hlStreak,0);
+  assert.deepEqual(hlState(r,a).streaks,{});
+});

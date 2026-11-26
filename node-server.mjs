@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 import {evaluate,balance,inGame,beginGame,setBet,startRoundIfReady,rollPlayer,tickGame,nextRound,returnLobby,logEvent,timerState,accuse} from './game.mjs';
 import {GAMES,gameDefinition} from './public/games.js';
 import {roomExpiry,roomExpired} from './room-life.mjs';
-import {HL_GAME,hlInit,hlBet,hlFlip,hlState,cpuHighLowBets,cardLabel} from './highlow.mjs';
+import {HL_GAME,HL_GAMES,hlInit,hlBet,hlFlip,hlState,cpuHighLowBets,cardLabel} from './highlow.mjs';
+import {HK_GAME,hkInit,hkRedraw,hkOpen,hkAnswer,hkClose,hkTick,hkNext,hkResetStats,hkTimer,hkState} from './hitokoto.mjs';
 import {KB_GAME,kbInit,kbSelect,kbLives,kbStart,kbRetheme,kbWord,kbTick,kbMove,kbReveal,kbReset,kbTimer,kbState} from './kotoba.mjs';
 
 const rooms = new Map();
@@ -16,25 +17,27 @@ const active = p => p.demo || Date.now() - p.seen < 45000;
 export function hand(dice) {return evaluate(dice).name;}
 function state(r,me){
   const g=r.game;
-  return {id:r.id,serverNow:Date.now(),expiresAt:roomExpiry(r),timer:r.gameType===KB_GAME?kbTimer(r):timerState(r),gameType:gameDefinition(r.gameType).id,gameName:gameDefinition(r.gameType).name,title:r.title,hostId:r.host.id,phase:r.phase,round:r.round,gameNumber:r.gameNumber||0,
+  return {id:r.id,serverNow:Date.now(),expiresAt:roomExpiry(r),timer:r.gameType===KB_GAME?kbTimer(r):r.hk?hkTimer(r):timerState(r),gameType:gameDefinition(r.gameType).id,gameName:gameDefinition(r.gameType).name,title:r.title,hostId:r.host.id,phase:r.phase,round:r.round,gameNumber:r.gameNumber||0,
     turnId:r.phase==='playing'?g?.roundOrder[g.turnIndex]||null:null,
     dealerId:g?.dealerId||null,roundOrder:g?.roundOrder||[],totalRounds:g?.totalRounds??g?.order.length??0,
     lastRollId:r.lastRollId||null,shot:r.shot?.version===2?r.shot:null,settlement:r.settlement||null,
-    me:me.id,isHost:me===r.host,hostPlaying:true,selected:r.selected,logs:r.logs,hl:hlState(r,me),kb:r.gameType===KB_GAME?kbState(r,me):null,cheatMode:!!gameDefinition(r.gameType).cheat,judgement:r.phase==='judgement'?{accuserId:g.judgement.accuserId,revealAt:g.judgement.revealAt}:r.judgement||null,hostCheated:me===r.host&&gameDefinition(r.gameType).cheat?!!g?.cheated:undefined,
+    me:me.id,isHost:me===r.host,hostPlaying:true,selected:r.selected,logs:r.logs,hl:hlState(r,me),kb:r.gameType===KB_GAME?kbState(r,me):null,hk:hkState(r,me),cheatMode:!!gameDefinition(r.gameType).cheat,judgement:r.phase==='judgement'?{accuserId:g.judgement.accuserId,revealAt:g.judgement.revealAt}:r.judgement||null,hostCheated:me===r.host&&gameDefinition(r.gameType).cheat?!!g?.cheated:undefined,
     players:[r.host,...r.players.values()].map(p=>({id:p.id,name:p.name,want:p.want,online:active(p),demo:!!p.demo,
       points:balance(p),plays:p.plays,dice:p.dice,attempts:p.attempts,done:p.done,bet:p.bet||100,ready:!!p.ready,roundDelta:p.roundDelta??null}))};
 }
 const OG_IMAGES=['og-default.jpg','og-chinchiro.jpg','og-chinchiro-cheat.jpg','og-highlow.jpg','og-kotoba.jpg'];
+// bunny deck art, all 52 cards (card-h1.webp … card-d13.webp)
+const CARD_IMAGES=[...'hscd'].flatMap(s=>Array.from({length:13},(_,i)=>`card-${s}${i+1}.webp`));
 const PUBLIC_BASE=(globalThis.process?.env?.LOBBY_PUBLIC_URL||'https://iruca.tech/lobby/').replace(/\/?$/,'/');
 const attr=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Link cards for X / Discord: crawlers do not run JS, so the server writes the tags into the page.
 function ogTags(r,id){
-  const kind=!r?'default':r.gameType==='chinchiro-cheat'?'chinchiro-cheat':r.gameType==='highlow'?'highlow':r.gameType==='kotoba'?'kotoba':'chinchiro';
-  const game={'chinchiro':'チンチロ','chinchiro-cheat':'イカサマチンチロ','highlow':'ハイ＆ロー','kotoba':'ことばならべ'}[kind];
+  const kind=!r?'default':r.gameType==='chinchiro-cheat'?'chinchiro-cheat':HL_GAMES.has(r.gameType)?'highlow':r.gameType==='kotoba'?'kotoba':r.gameType===HK_GAME?'hitokoto':'chinchiro';
+  const game={'chinchiro':'チンチロ','chinchiro-cheat':'イカサマチンチロ','highlow':'ハイ＆ロー','kotoba':'ことばならべ','hitokoto':'ひとこと演技'}[kind];
   const title=r?`${r.host.name}の部屋で${game}を遊ぼう`:'あつまる卓 — 配信で、いっしょに。';
-  const desc=r?`「${r.title}」に招待されています。URLを開いて名前を入れるだけで参加できます（登録なし）。`:'配信者とリスナーで遊べるゲーム。チンチロ・ハイ＆ロー・ことばならべ。URLを開くだけで参加・登録なし。';
+  const desc=r?`「${r.title}」に招待されています。URLを開いて名前を入れるだけで参加できます（登録なし）。`:'配信者とリスナーで遊べるゲーム。チンチロ・ハイ＆ロー・ことばならべ・ひとこと演技。URLを開くだけで参加・登録なし。';
   const url=PUBLIC_BASE+(r?`?room=${id}`:'');
-  return [['og:type','website'],['og:site_name','あつまる卓'],['og:locale','ja_JP'],['og:title',title],['og:description',desc],['og:url',url],['og:image',PUBLIC_BASE+`og-${kind}.jpg`],['og:image:width','1200'],['og:image:height','630'],['og:image:alt',`あつまる卓 ${game||''}`.trim()]]
+  return [['og:type','website'],['og:site_name','あつまる卓'],['og:locale','ja_JP'],['og:title',title],['og:description',desc],['og:url',url],['og:image',PUBLIC_BASE+`og-${kind==='hitokoto'?'default':kind}.jpg`],['og:image:width','1200'],['og:image:height','630'],['og:image:alt',`あつまる卓 ${game||''}`.trim()]]
     .map(([k,v])=>`<meta property="${k}" content="${attr(v)}">`).join('')+`<meta name="twitter:card" content="summary_large_image"><meta name="description" content="${attr(desc)}">`;
 }
 const log=logEvent;
@@ -44,8 +47,14 @@ function kbAdvance(r){
   if(out.length)log(r,`時間切れで除外：${out.join('、')}`);
   log(r,res==='void'?'残りが1人以下のため不成立。ライフは除外されなかった人に戻しました':'全員の言葉がそろいました。配信者が並べ替えます');
 }
+function hkAdvance(r){
+  const res=r.hk&&hkTick(r,[...r.players.values()]);if(res)hkLog(r,res);
+}
+function hkLog(r,res){
+  log(r,`第${res.round}回「${res.word}」：正解は${'ABCDEF'[res.secret]}「${res.options[res.secret]}」・${res.correct}/${res.total}人正解${res.total?`（${Math.round(res.correct/res.total*100)}%）`:''}`);
+}
 function addDemoListeners(r) {
-  if(r.gameType===KB_GAME)return;
+  if(r.gameType===KB_GAME||r.gameType===HK_GAME)return;
   const names=['😈デビルゴッドダイス','🛁風呂キャンセル'];
   for(const p of r.players.values())if(p.demo)p.cpuKind=p.name===names[0]?'devil':'bath';
   if(r.cpuRosterVersion===1||inGame(r))return;
@@ -78,10 +87,11 @@ export const server = http.createServer(async (req, res) => {
         let id;
         do { id = String(randomInt(0,100000000)).padStart(8,'0'); } while (rooms.has(id));
         const host = { id:token(), auth:token(), name:clean(b.name,'配信者'), points:3000, want:false, seen:Date.now(), plays:0, dice:[], attempts:0, done:false };
-        const r = { id, gameType, title:clean(b.title,gameType===HL_GAME?'今夜のハイ＆ロー':gameType===KB_GAME?'今夜のことばならべ':'今夜のチンチロ部屋'), host, players:new Map(), selected:[], phase:'lobby', round:0, logs:[], createdAt:Date.now(),lastPlayedAt:Date.now(),updated:Date.now() };
+        const r = { id, gameType, title:clean(b.title,HL_GAMES.has(gameType)?'今夜のハイ＆ロー':gameType===KB_GAME?'今夜のことばならべ':gameType===HK_GAME?'今夜のひとこと演技':'今夜のチンチロ部屋'), host, players:new Map(), selected:[], phase:'lobby', round:0, logs:[], createdAt:Date.now(),lastPlayedAt:Date.now(),updated:Date.now() };
         rooms.set(id,r); log(r,'部屋ができました。参加者を待っています'); addDemoListeners(r);
         if(gameType===KB_GAME)kbInit(r);
-        if(gameType===HL_GAME){hlInit(r);cpuHighLowBets(r,[...r.players.values()]);log(r,`ハイ＆ロー開始：最初のカードは ${cardLabel(r.hl.current)}`)}
+        if(gameType===HK_GAME){hkInit(r);log(r,`ひとこと演技：最初のひとことは「${r.hk.word}」`)}
+        if(HL_GAMES.has(gameType)){hlInit(r);cpuHighLowBets(r,[...r.players.values()]);log(r,`ハイ＆ロー開始：最初のカードは ${cardLabel(r.hl.current)}`)}
         return send(201,{token:host.auth,state:state(r,host)});
       }
       const match = url.pathname.match(/^\/api\/rooms\/([a-f0-9]{8})(?:\/(join|action))?$/);
@@ -102,14 +112,15 @@ export const server = http.createServer(async (req, res) => {
       r.__requestAuthorized=true;
       if(me===r.host) addDemoListeners(r);
       me.seen=Date.now(); r.updated=Date.now();
-      tickGame(r);kbAdvance(r);
+      tickGame(r);kbAdvance(r);hkAdvance(r);
       if (!match[2] && req.method==='GET') return send(200,state(r,me));
       if (match[2] !== 'action' || req.method !== 'POST') fail('操作できません',405);
       const b=await body(req);
-      if (['select','start','finish','points','next','hl-flip','kb-select','kb-start','kb-retheme','kb-move','kb-reveal','kb-reset','kb-lives'].includes(b.type) && me!==r.host) fail('配信者だけが操作できます',403);
-      const isHL=r.gameType===HL_GAME;
-      const isKB=r.gameType===KB_GAME;
-      if((isHL||isKB)&&['select','start','bet','roll','next','finish','accuse'].includes(b.type))fail('このゲームでは使えない操作です');
+      if (['select','start','finish','points','next','hl-flip','kb-select','kb-start','kb-retheme','kb-move','kb-reveal','kb-reset','kb-lives','hk-redraw','hk-open','hk-close','hk-next','hk-reset'].includes(b.type) && me!==r.host) fail('配信者だけが操作できます',403);
+      const isHL=HL_GAMES.has(r.gameType);
+      const isKB=r.gameType===KB_GAME,isHK=!!r.hk;
+      if(!isHK&&String(b.type).startsWith('hk-'))fail('このゲームでは使えない操作です');
+      if((isHL||isKB||isHK)&&['select','start','bet','roll','next','finish','accuse'].includes(b.type))fail('このゲームでは使えない操作です');
       if(!isKB&&String(b.type).startsWith('kb-'))fail('このゲームでは使えない操作です');
       if(!isHL&&String(b.type).startsWith('hl-'))fail('このゲームでは使えない操作です');
       if(b.type==='points') {
@@ -161,6 +172,18 @@ export const server = http.createServer(async (req, res) => {
         const res=kbReveal(r);if(res)log(r,`第${r.kb.round}回：${res.correct}/${res.total}枚が正しい位置${res.correct===res.total?'。全員成功！':''}`);
       } else if(b.type==='kb-reset') {
         kbReset(r);
+      } else if(b.type==='hk-redraw') {
+        hkRedraw(r);log(r,`ひとことを引き直し：「${r.hk.word}」`);
+      } else if(b.type==='hk-open') {
+        hkOpen(r);log(r,`第${r.hk.round}回「${r.hk.word}」：回答受付スタート（45秒）`);
+      } else if(b.type==='hk-answer') {
+        hkAnswer(r,me,b);
+      } else if(b.type==='hk-close') {
+        hkLog(r,hkClose(r,[...r.players.values()]));
+      } else if(b.type==='hk-next') {
+        hkNext(r);
+      } else if(b.type==='hk-reset') {
+        hkResetStats(r,[...r.players.values()]);log(r,'成績をリセットしました');
       } else if(b.type==='hl-bet') {
         hlBet(r,me,b);
       } else if(b.type==='hl-flip') {
@@ -169,14 +192,14 @@ export const server = http.createServer(async (req, res) => {
         if(r.hl.reshuffled)log(r,'山札を切り直しました');
         cpuHighLowBets(r,[...r.players.values()]);
       } else fail('不明な操作です');
-      if(['start','bet','roll','next','hl-bet','hl-flip','kb-start','kb-word','kb-move','kb-reveal'].includes(b.type))r.lastPlayedAt=Date.now();
-      tickGame(r);kbAdvance(r);
+      if(['start','bet','roll','next','hl-bet','hl-flip','kb-start','kb-word','kb-move','kb-reveal','hk-open','hk-answer','hk-close','hk-next'].includes(b.type))r.lastPlayedAt=Date.now();
+      tickGame(r);kbAdvance(r);hkAdvance(r);
       return send(200,state(r,me));
     }
     if (req.method!=='GET' && req.method!=='HEAD') fail('操作できません',405);
-    const file = ['app.js','games.js','dice-bundle.js','style.css',...OG_IMAGES].find(f=>url.pathname.endsWith('/'+f))||'index.html';
+    const file = ['app.js','games.js','dice-bundle.js','style.css',...OG_IMAGES,...CARD_IMAGES].find(f=>url.pathname.endsWith('/'+f))||'index.html';
     let data=await readFile(new URL(`./public/${file}`,import.meta.url));
-    if(file.endsWith('.jpg')){res.writeHead(200,{'content-type':'image/jpeg','cache-control':'public, max-age=86400','x-content-type-options':'nosniff'});return res.end(req.method==='HEAD'?'':data)}
+    if(/\.(jpg|webp)$/.test(file)){res.writeHead(200,{'content-type':file.endsWith('.webp')?'image/webp':'image/jpeg','cache-control':'public, max-age=86400','x-content-type-options':'nosniff'});return res.end(req.method==='HEAD'?'':data)}
     if(file==='index.html'){const id=url.searchParams.get('room'),room=/^[a-f0-9]{8}$/.test(id||'')?rooms.get(id):null;data=(typeof data==='string'?data:new TextDecoder().decode(data)).replace('<!--og-->',ogTags(room&&!roomExpired(room)?room:null,id))}
     res.writeHead(200,{'content-type':file.endsWith('.js')?'text/javascript; charset=utf-8':file.endsWith('.css')?'text/css; charset=utf-8':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}); res.end(req.method==='HEAD'?undefined:data);
   } catch(e) { send(e.status||500,{error:e.status?e.message:'通信に失敗しました'}); }

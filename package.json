@@ -6,7 +6,7 @@
     "dev": "node node-server.mjs",
     "start": "node server-vps.mjs",
     "build:vps": "node build-vps.mjs",
-    "test": "node --test game.test.mjs highlow.test.mjs cheat.test.mjs kotoba.test.mjs game-api.test.mjs physics.test.mjs vps.test.mjs"
+    "test": "node --test game.test.mjs highlow.test.mjs cheat.test.mjs kotoba.test.mjs hitokoto.test.mjs game-api.test.mjs physics.test.mjs vps.test.mjs"
   },
   "dependencies": {
     "cannon-es": "^0.20.0",

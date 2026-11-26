@@ -71,13 +71,15 @@ const trayHtml=()=>`<div class="tray-view" role="img" aria-label="トレイの�
 const GAME_ICONS={
  dice:'<rect x="3.5" y="3.5" width="17" height="17" rx="4"/><circle cx="8.5" cy="8.5" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="15.5" cy="15.5" r="1.3" fill="currentColor"/>',
  line:'<rect x="3" y="14" width="4" height="6" rx="1"/><rect x="10" y="10" width="4" height="10" rx="1"/><rect x="17" y="5" width="4" height="15" rx="1"/>',
+ voice:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4h0A2.5 2.5 0 0 1 4 13.5z"/><path d="M9 8.5h6M9 11.5h3.5"/>',
  card:'<rect x="7" y="3" width="12" height="17" rx="2"/><path d="M5 6.5 3.6 7l3.6 13.4 7.3-2"/><path d="M13 9.5c-1.6 1.2-2.6 2.2-2.6 3.3a1.6 1.6 0 0 0 2.6 1.2 1.6 1.6 0 0 0 2.6-1.2c0-1.1-1-2.1-2.6-3.3z"/>'
 };
 // Families shown top to bottom. Add a new game here (and in games.js) to grow the menu.
 const GAME_MENU=[
  {key:'chinchiro',name:'チンチロ',icon:'dice',desc:'サイコロ3つの役で勝負。配信者が指名した最大4人で卓を囲む。',variants:[['chinchiro-rotation','親回り','全員が1回ずつ親'],['chinchiro-fixed','親固定','配信者がずっと親・1回'],['chinchiro-cheat','イカサマあり','親固定・シゴロ賽OK']]},
  {key:'kotoba',name:'ことばならべ',icon:'line',desc:'数字は言わずに、お題に沿った言葉だけで大きさ順に並べる協力ゲーム。最大8人、並べるのは配信者。',variants:[['kotoba','','']]},
- {key:'highlow',name:'ハイ＆ロー',icon:'card',desc:'配信者がカードをめくり、入室中のリスナー全員が次のカードに賭ける。',variants:[['highlow','','']]}
+ {key:'hitokoto',name:'ひとこと演技',icon:'voice',desc:'配信者がひとことを演じ、リスナーは6つの場面のどれかを伏せて当てる。入室中の全員が参加。',variants:[['hitokoto','','']]},
+ {key:'highlow',name:'ハイ＆ロー',icon:'card',desc:'配信者がカードをめくり、入室中のリスナー全員が次のカードに賭ける。',variants:[['highlow','ノーマル','シンプルな絵札'],['highlow-bunny','バニー','絵札がバニーのイラスト']]}
 ].map(f=>({...f,variants:f.variants.filter(([id])=>GAMES.some(g=>g.id===id))})).filter(f=>f.variants.length);
 const gameIcon=n=>`<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${GAME_ICONS[n]}</svg>`;
 function gameMenuHtml(current){
@@ -89,12 +91,14 @@ function gameMenuHtml(current){
  }).join('')}</div>`;
 }
 function rulesHtml(kind,fixed){
- return kind==='highlow'
-  ?`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>ハイ＆ロー</span></div><div class="roles"><span>ハイ/ロー的中 <b>2倍戻り</b></span><span>同じ数字 <b>返却</b></span><span>はずれ <b>没収</b></span><span>色も的中 <b>さらに2倍</b></span><span>色はずれ <b>没収</b></span></div><p class="note">次のカードが今より上（ハイ）か下（ロー）かに、0点から100点単位で賭ける。色の予想は任意。Aが一番弱くKが一番強い。配信者がめくるまでベットは変更できる。</p></section>`
+ return kind==='hitokoto'
+  ?`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>ひとこと演技</span></div><ol class="note"><li>配信者にだけ、ひとことと6つの場面のうち<b>担当の1つ</b>が見えます。</li><li>配信者がその場面のつもりで、配信でひとことを演じます。</li><li>受付が始まったら、リスナーは<b>45秒以内</b>にどの場面かを1つ選びます。ほかの人の回答は締め切りまで見えません。</li><li>全員の回答と正解を同時に公開。正解数と正答率がたまっていきます。</li></ol></section>`
+  :kind==='highlow'
+  ?`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>ハイ＆ロー</span></div><div class="roles"><span>ハイ/ロー的中 <b>2倍戻り</b></span><span>同じ数字 <b>返却</b></span><span>はずれ <b>没収</b></span><span>色も的中 <b>さらに2倍</b></span><span>色はずれ <b>没収</b></span></div><p class="note">次のカードが今より上（ハイ）か下（ロー）かに、0点から100点単位で賭ける。色の予想は任意。Aが一番弱くKが一番強い。ハイかローを選べば0点でも参加、選ばなければ自動で「ステイ」（このカードは不参加）。配信者がめくるまでベットは変更・ステイに戻せる。<br>連勝：当たる（色を選んだら色も当たる）と+1、外れると0に戻る。ステイした回と、色なしで同じ数字だった回は数えない。</p></section>`
   :kind==='cheat'?`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>チンチロ イカサマあり</span></div><div class="roles"><span>ピンゾロ <b>×5</b></span><span>ゾロ目 <b>×3</b></span><span>シゴロ <b>×2</b></span><span>出目 <b>×1</b></span><span>ヒフミ <b>2倍払い</b></span><span>目なし <b>3回まで</b></span></div><p class="note">配信者がずっと親。親は普通のサイコロか、4・5・6しか出ない「シゴロ賽」を選んで振れる。子はゲーム中いつでも「イカサマを指摘」でき、その時点でゲームは不成立になり判定タイムへ。<br>当たり：親が指摘した子に掛け金の10倍を払う。<br>外れ：指摘した子が、ほかの子それぞれに（自分の掛け金＋その子の掛け金）×2を払い、親にもその合計を払う。</p></section>`
   :`<section class="card rules"><div class="card-head"><h2>ルール</h2><span>チンチロ ${fixed?'親固定':'親回り'}</span></div><div class="roles"><span>ピンゾロ <b>×5</b></span><span>ゾロ目 <b>×3</b></span><span>シゴロ <b>×2</b></span><span>出目 <b>×1</b></span><span>ヒフミ <b>2倍払い</b></span><span>目なし <b>3回まで</b></span></div><p class="note">${fixed?'配信者が親。子は配信者とだけ精算して1ゲーム。':'親と順番を抽選し、全員が親を務めたら1ゲーム。'}掛け金・投擲・次への進行はそれぞれ20秒で自動。0点以下でもゲーム中は100点で続行し、終了後にリスナーは待機所へ戻ります。</p></section>`;
 }
-const DEFAULT_TITLES={chinchiro:'今夜のチンチロ部屋','chinchiro-rotation':'今夜のチンチロ部屋','chinchiro-fixed':'今夜のチンチロ部屋',highlow:'今夜のハイ＆ロー',kotoba:'今夜のことばならべ'};
+const DEFAULT_TITLES={chinchiro:'今夜のチンチロ部屋','chinchiro-rotation':'今夜のチンチロ部屋','chinchiro-fixed':'今夜のチンチロ部屋',highlow:'今夜のハイ＆ロー','highlow-bunny':'今夜のハイ＆ロー',kotoba:'今夜のことばならべ',hitokoto:'今夜のひとこと演技'};
 function entry(error=''){
  menuOpen=false;
  const hero=[4,5,6].map((n,i)=>`<span class="flat-die" style="--tilt:${[-8,5,-3][i]}deg">${faceHtml(n)}</span>`).join('');
@@ -130,7 +134,7 @@ function render(){
  if(!state)return;
  const s=state;
  const rolling=!!(s.phase==='playing'&&s.shot&&now()<s.shot.startedAt+s.shot.duration);
- const signature=JSON.stringify({...s,serverNow:0,expiresAt:0})+rolling+editing+menuOpen+JSON.stringify(hlDraft)+[...firstSeen].filter(([,t])=>Date.now()-t<8000).length;
+ const signature=JSON.stringify({...s,serverNow:0,expiresAt:0})+rolling+editing+menuOpen+JSON.stringify(hlDraft)+JSON.stringify(hkDraft)+[...firstSeen].filter(([,t])=>Date.now()-t<8000).length;
  if(signature===last){return}
  if(kbDrag){setTimeout(()=>render(),300);return}
  const act=document.activeElement;if(act?.id==='kb-word'&&kbComposing){setTimeout(()=>{last='';render()},400);return}
@@ -138,6 +142,7 @@ function render(){
  queueMicrotask(()=>{if(refocus){const el=$('#kb-word');if(el){el.focus();try{el.setSelectionRange(...refocus)}catch{}}}});
  if(s.hl){renderHighLow(s);return}
  if(s.kb){renderKotoba(s);return}
+ if(s.hk){renderHitokoto(s);return}
  const me=s.players.find(p=>p.id===s.me),host=s.players.find(p=>p.id===s.hostId);
  const def=gameDefinition(s.gameType),fixed=def.dealer==='host';
  const play=s.phase==='playing',betting=s.phase==='betting',settled=s.phase==='settlement',finished=s.phase==='finished',judging=s.phase==='judgement',locked=betting||play||settled||judging,open=!locked;
@@ -245,7 +250,36 @@ function render(){
 const SUIT={S:'♠',H:'♥',D:'♦',C:'♣'},RANK={1:'A',11:'J',12:'Q',13:'K'};
 const isRed=c=>c.suit==='H'||c.suit==='D';
 const cardName=c=>`${SUIT[c.suit]}${RANK[c.rank]||c.rank}`;
-const cardHtml=(c,cls='')=>`<div class="pcard ${isRed(c)?'red':''} ${cls}" role="img" aria-label="${isRed(c)?'赤':'黒'}の${cardName(c)}"><span class="corner tl">${RANK[c.rank]||c.rank}<i>${SUIT[c.suit]}&#xFE0E;</i></span><span class="suit">${SUIT[c.suit]}&#xFE0E;</span><span class="corner br">${RANK[c.rank]||c.rank}<i>${SUIT[c.suit]}&#xFE0E;</i></span></div>`;
+// Real playing-card faces: pips laid out like a standard deck for 2–10, court figures for J/Q/K.
+// [x,y] are fractions of the pip area; pips in the lower half are drawn upside down like printed cards.
+const CARD_PIPS={2:[[.5,0],[.5,1]],3:[[.5,0],[.5,.5],[.5,1]],4:[[0,0],[1,0],[0,1],[1,1]],5:[[0,0],[1,0],[.5,.5],[0,1],[1,1]],
+ 6:[[0,0],[1,0],[0,.5],[1,.5],[0,1],[1,1]],7:[[0,0],[1,0],[.5,.25],[0,.5],[1,.5],[0,1],[1,1]],
+ 8:[[0,0],[1,0],[.5,.25],[0,.5],[1,.5],[.5,.75],[0,1],[1,1]],
+ 9:[[0,0],[1,0],[0,1/3],[1,1/3],[.5,.5],[0,2/3],[1,2/3],[0,1],[1,1]],
+ 10:[[0,0],[1,0],[.5,1/6],[0,1/3],[1,1/3],[0,2/3],[1,2/3],[.5,5/6],[0,1],[1,1]]};
+// Original court figure (not copied from any deck): one bust, mirrored top/bottom.
+function courtSvg(c){
+ const red=isRed(c),ink=red?'#B3262E':'#1E2A44',robe=red?'#B3262E':'#2C4F8C',alt=red?'#2C4F8C':'#B3262E',gold='#D9B76A',skin='#F3D9BC';
+ const hat=c.rank===13?`<path d="M19 17 21 7l5 6 4-8 4 8 5-6 2 10z" fill="${gold}" stroke="${ink}" stroke-width=".8"/><circle cx="30" cy="5" r="1.3" fill="${alt}"/>`
+  :c.rank===12?`<path d="M20 17q10-9 20 0" fill="${gold}" stroke="${ink}" stroke-width=".8"/><circle cx="30" cy="10.5" r="1.8" fill="${alt}"/><path d="M19 18q-3 10 1 19M41 18q3 10-1 19" fill="none" stroke="${ink}" stroke-width="1.6"/>`
+  :`<path d="M19 17q11-11 22 0z" fill="${alt}" stroke="${ink}" stroke-width=".8"/><path d="M39 13q8-8 6-12q-5 3-8 10" fill="${gold}" stroke="${ink}" stroke-width=".7"/>`;
+ const face=`<circle cx="30" cy="23" r="8.5" fill="${skin}" stroke="${ink}" stroke-width=".8"/><path d="M27 22h.1M33 22h.1" stroke="${ink}" stroke-width="1.6" stroke-linecap="round"/><path d="M28 26q2 1.4 4 0" fill="none" stroke="${ink}" stroke-width=".7"/>${c.rank===13?`<path d="M24 26q6 9 12 0" fill="${ink}" opacity=".85"/>`:''}`;
+ const body=`<path d="M10 45q2-13 20-14q18 1 20 14z" fill="${robe}" stroke="${ink}" stroke-width=".8"/><path d="M22 32l8 13 8-13" fill="${gold}" stroke="${ink}" stroke-width=".7"/><path d="M14 45q1-6 5-9M46 45q-1-6-5-9" fill="none" stroke="${gold}" stroke-width="1.6"/>`;
+ const item=c.rank===13?`<path d="M13 43 19 26" stroke="${ink}" stroke-width="1.4"/><circle cx="19" cy="25" r="2.2" fill="${gold}" stroke="${ink}" stroke-width=".6"/>`
+  :c.rank===12?`<path d="M14 43q2-8 5-13" fill="none" stroke="#3D7A4A" stroke-width="1.2"/><circle cx="19" cy="29" r="2.6" fill="${alt}" stroke="${ink}" stroke-width=".6"/>`
+  :`<path d="M46 43 41 27" stroke="${ink}" stroke-width="1.3"/><path d="M38 31h6" stroke="${gold}" stroke-width="1.6"/>`;
+ const half=`${body}${item}${hat}${face}<text x="47" y="12" font-size="9" text-anchor="middle" fill="${red?'#B3262E':'#1A1A1A'}">${SUIT[c.suit]}&#xFE0E;</text>`;
+ return `<svg class="court" viewBox="0 0 60 90" aria-hidden="true"><rect x=".6" y=".6" width="58.8" height="88.8" rx="3" fill="#FBF8F1" stroke="${gold}" stroke-width="1.2"/><g>${half}</g><g transform="rotate(180 30 45)">${half}</g><path d="M2 45h56" stroke="${ink}" stroke-width=".5" opacity=".5"/></svg>`;
+}
+let cardDeck='normal';
+function cardFace(c){
+ const s=`${SUIT[c.suit]}&#xFE0E;`;
+ if(cardDeck==='bunny')return `<img class="court-art" src="card-${c.suit.toLowerCase()}${c.rank}.webp" alt="" decoding="async">`;
+ if(c.rank===1)return `<span class="suit ace">${s}</span>`;
+ if(c.rank>10)return `<div class="court-wrap">${courtSvg(c)}</div>`;
+ return `<div class="cpips">${CARD_PIPS[c.rank].map(([x,y])=>`<span class="pip ${y>.5?'down':''}" style="left:${x*100}%;top:${y*100}%">${s}</span>`).join('')}</div>`;
+}
+const cardHtml=(c,cls='')=>`<div class="pcard ${isRed(c)?'red':''} ${cardDeck==='bunny'?'art':''} ${cls}" role="img" aria-label="${isRed(c)?'赤':'黒'}の${cardName(c)}"><span class="corner tl">${RANK[c.rank]||c.rank}<i>${SUIT[c.suit]}&#xFE0E;</i></span>${cardFace(c)}<span class="corner br">${RANK[c.rank]||c.rank}<i>${SUIT[c.suit]}&#xFE0E;</i></span></div>`;
 const backHtml=(cls='')=>`<div class="pcard back ${cls}" aria-label="次のカード（裏向き）"></div>`;
 const PICK={high:'ハイ',low:'ロー'},COLOR={red:'赤',black:'黒'};
 let hlDraft=null,hlAnimated=null;
@@ -255,7 +289,11 @@ function hlDraftFor(s,me){
  const max=Math.max(0,Math.floor((me.points??0)/100)*100);hlDraft.amount=Math.max(0,Math.min(max,hlDraft.amount));
  return {...hlDraft,max};
 }
+const streakTag=n=>n?`<span class="tag streak">${n}連勝</span>`:'';
+let courtPreloaded=false;
 function renderHighLow(s){
+ cardDeck=s.gameType==='highlow-bunny'?'bunny':'normal';
+ if(cardDeck==='bunny'&&!courtPreloaded){courtPreloaded=true;for(const x of 'hscd')for(let n=1;n<=13;n++)new Image().src=`card-${x}${n}.webp`}
  const hl=s.hl,me=s.players.find(p=>p.id===s.me),url=new URL(base);url.searchParams.set('room',s.id);
  const last=hl.last,fresh=last&&hlAnimated!==last.round&&now()-last.at<6000;
  if(last&&hlAnimated==null&&!fresh)hlAnimated=last.round;
@@ -265,14 +303,14 @@ function renderHighLow(s){
  const mine=last?.results.find(x=>x.id===s.me);
  const winners=last?last.results.filter(x=>x.delta>0).length:0;
  const banner=last?`<div class="hl-banner ${fresh?'pop':''}"><strong>${outcome}${last.next.rank===last.prev.rank?'':'！'}</strong><span>${cardName(last.prev)} → ${cardName(last.next)} · ${isRed(last.next)?'赤':'黒'} · 勝ち ${winners}人</span>
-   ${mine?`<p class="mine ${mine.delta>0?'up':mine.delta<0?'down':''}">あなた：${PICK[mine.pick]}${mine.color?`・${COLOR[mine.color]}`:''} ${number(mine.amount)}点 → <b>${signed(mine.delta)}</b></p>`:''}</div>`:'<div class="hl-banner"><strong>ハイ？ ロー？</strong><span>次のカードが今より上か下かを当てよう</span></div>';
+   ${mine?`<p class="mine ${mine.delta>0?'up':mine.delta<0?'down':''}">あなた：${PICK[mine.pick]}${mine.color?`・${COLOR[mine.color]}`:''} ${number(mine.amount)}点 → <b>${signed(mine.delta)}</b>${mine.won?` · ${mine.streak}連勝中`:mine.lost?' · 連勝リセット':''}</p>`:''}</div>`:'<div class="hl-banner"><strong>ハイ？ ロー？</strong><span>次のカードが今より上か下かを当てよう</span></div>';
 
  const table=`<div class="hl-table">
    <div class="hl-current"><div class="flip ${anim}">${cardHtml(hl.current,'lg')}</div><span>いまのカード</span></div>
    <div class="hl-next">${backHtml('lg')}<span>次のカード</span></div></div>`;
 
  const tally=hl.tally;
- const tallyHtml=`<div class="hl-tally"><span class="tag up">ハイ ${tally.high}</span><span class="tag down">ロー ${tally.low}</span><span class="tag">赤 ${tally.red}</span><span class="tag">黒 ${tally.black}</span><span class="muted">合計 ${number(tally.stake)}点</span></div>`;
+ const tallyHtml=`<div class="hl-tally"><span class="tag up">ハイ ${tally.high}</span><span class="tag down">ロー ${tally.low}</span><span class="tag">赤 ${tally.red}</span><span class="tag">黒 ${tally.black}</span><span class="tag">ステイ ${Math.max(0,s.players.length-1-tally.total)}</span><span class="muted">合計 ${number(tally.stake)}点</span></div>`;
 
  let panel='';
  if(s.isHost){
@@ -281,32 +319,33 @@ function renderHighLow(s){
   const prev=hl.current.rank,returned=!d.pick?0:d.color?d.amount*4:d.amount*2;
   const half=Math.max(0,Math.floor(d.max/200)*100);
   panel=`<form class="hl-bet" id="hl-form">
-   <div class="seg pick" role="group" aria-label="ハイかロー">
+   <div class="seg pick" role="group" aria-label="ハイ・ステイ・ロー">
      <button type="button" class="${d.pick==='high'?'on':''}" data-hl-pick="high" aria-pressed="${d.pick==='high'}"><b>ハイ</b><small>${RANK[prev]||prev}より上</small></button>
+     <button type="button" class="stay ${!d.pick?'on':''}" data-hl-stay aria-pressed="${!d.pick}"><b>ステイ</b><small>参加しない</small></button>
      <button type="button" class="${d.pick==='low'?'on':''}" data-hl-pick="low" aria-pressed="${d.pick==='low'}"><b>ロー</b><small>${RANK[prev]||prev}より下</small></button></div>
    <div class="seg color" role="group" aria-label="色も当てる（任意）"><span>色も当てる</span>
      <button type="button" class="${!d.color?'on':''}" data-hl-color="" aria-pressed="${!d.color}">なし</button>
      <button type="button" class="${d.color==='red'?'on':''} red" data-hl-color="red" aria-pressed="${d.color==='red'}">赤</button>
      <button type="button" class="${d.color==='black'?'on':''}" data-hl-color="black" aria-pressed="${d.color==='black'}">黒</button></div>
-   <div class="bet-head"><span>ベット</span><span>持ち点 ${number(me.points)}</span></div>
+   <div class="bet-head"><span>ベット${hl.streaks?.[s.me]?` <span class="tag streak">いま${hl.streaks[s.me]}連勝</span>`:''}</span><span>持ち点 ${number(me.points)}</span></div>
    <div class="stepper"><button type="button" class="btn" data-hl-amt="${d.amount-100}" ${d.amount<=0?'disabled':''} aria-label="100点減らす">−100</button><output aria-live="polite">${number(d.amount)}</output><button type="button" class="btn" data-hl-amt="${d.amount+100}" ${d.amount>=d.max?'disabled':''} aria-label="100点増やす">＋100</button></div>
    <div class="quick four"><button type="button" class="btn" data-hl-amt="0">0</button><button type="button" class="btn" data-hl-amt="100" ${d.max<100?'disabled':''}>100</button><button type="button" class="btn" data-hl-amt="${half}" ${d.max<200?'disabled':''}>半分</button><button type="button" class="btn" data-hl-amt="${d.max}" ${d.max<100?'disabled':''}>全額</button></div>
-   <p class="note center">${d.pick?`当たれば ${number(returned)}点 戻り（${signed(returned-d.amount)}）${d.color?' · 色が外れたら没収':''} · 同じ数字は${d.color?'色が当たれば2倍':'ベットを返却'}`:'ハイかローを選んでね'}</p>
-   <button class="btn primary big" type="submit" ${d.pick?'':'disabled'}>${hl.myBet?'ベットを変更':d.pick?`${PICK[d.pick]}${d.color?`・${COLOR[d.color]}`:''}に ${number(d.amount)}点`:'ベットする'}</button>
-   ${hl.myBet?`<div class="placed"><span class="tag gold">ベット済み</span>${PICK[hl.myBet.pick]}${hl.myBet.color?`・${COLOR[hl.myBet.color]}`:''} ${number(hl.myBet.amount)}点 <button type="button" class="btn sm" data-hl-cancel>取り消す</button></div>`:''}
+   <p class="note center">${d.pick?`当たれば ${number(returned)}点 戻り（${signed(returned-d.amount)}）${d.color?' · 色が外れたら没収':''} · 同じ数字は${d.color?'色が当たれば2倍':'ベットを返却'}`:'ステイ中：このカードには参加しません（連勝もそのまま）。ハイかローを選ぶと0点でも参加'}</p>
+   <button class="btn primary big" type="submit" ${d.pick?'':'disabled'}>${!d.pick?'ステイ中':hl.myBet?'ベットを変更':d.pick?`${PICK[d.pick]}${d.color?`・${COLOR[d.color]}`:''}に ${number(d.amount)}点`:'ベットする'}</button>
+   ${hl.myBet?`<div class="placed"><span class="tag gold">ベット済み</span>${PICK[hl.myBet.pick]}${hl.myBet.color?`・${COLOR[hl.myBet.color]}`:''} ${number(hl.myBet.amount)}点</div>`:''}
    ${(me.points??0)<=0?'<p class="note center">持ち点が0以下のあいだは0点ベットで参加できます</p>':''}
   </form>${tallyHtml}`;
  }
 
- const bettors=hl.bets.map(b=>{const p=s.players.find(x=>x.id===b.id);return p?`<li>${avatar(p,'sm')}<span class="name">${esc(p.name)}</span><span class="tag ${b.pick==='high'?'up':'down'}">${PICK[b.pick]}</span>${b.color?`<span class="tag ${b.color==='red'?'redtag':''}">${COLOR[b.color]}</span>`:''}<span class="pts">${number(b.amount)}</span></li>`:''}).join('');
- const results=last?.results.length?`<section class="card hl-results"><div class="card-head"><h2>第${last.round}回の結果</h2><span>${cardName(last.prev)} → ${cardName(last.next)}</span></div><ol>${last.results.map(x=>`<li><span class="name">${esc(x.name)}</span><span class="pick">${PICK[x.pick]}${x.color?`・${COLOR[x.color]}`:''} ${number(x.amount)}</span><span class="tag ${x.delta>0?'up':x.delta<0?'down':''}">${signed(x.delta)}</span><span class="pts">${number(x.points)}</span></li>`).join('')}</ol></section>`:'';
+ const bettors=hl.bets.map(b=>{const p=s.players.find(x=>x.id===b.id);return p?`<li>${avatar(p,'sm')}<span class="name">${esc(p.name)}</span><span class="tag ${b.pick==='high'?'up':'down'}">${PICK[b.pick]}</span>${b.color?`<span class="tag ${b.color==='red'?'redtag':''}">${COLOR[b.color]}</span>`:''}${streakTag(hl.streaks?.[b.id])}<span class="pts">${number(b.amount)}</span></li>`:''}).join('');
+ const results=last?.results.length?`<section class="card hl-results"><div class="card-head"><h2>第${last.round}回の結果</h2><span>${cardName(last.prev)} → ${cardName(last.next)}</span></div><ol>${last.results.map(x=>`<li><span class="name">${esc(x.name)}</span><span class="pick">${PICK[x.pick]}${x.color?`・${COLOR[x.color]}`:''} ${number(x.amount)}</span><span class="tag ${x.delta>0?'up':x.delta<0?'down':''}">${signed(x.delta)}</span>${streakTag(x.won?x.streak:0)}<span class="pts">${number(x.points)}</span></li>`).join('')}</ol></section>`:'';
  const past=hl.history.slice(0,-1).slice(-5).reverse();
  const history=`<div class="hl-past" aria-label="これまでのカード（新しい順）"><span class="label">これまで</span><div class="row">${past.length?past.map((c,i)=>`<div class="past ${i===0?'latest':''}">${cardHtml(c,'xs')}<small>${i===0?'前回':`${i+1}回前`}</small></div>`).join(''):'<p class="note">まだめくっていません</p>'}${Array.from({length:Math.max(0,5-past.length)},()=>'<div class="past empty"><div class="pcard xs ghost"></div><small>&nbsp;</small></div>').join('')}</div></div>`;
 
  const members=[...s.players].sort((a,b)=>(b.id===s.hostId)-(a.id===s.hostId)||(b.points??0)-(a.points??0)).map(p=>{
    const bet=hl.bets.find(b=>b.id===p.id),fresh=Date.now()-(firstSeen.get(p.id)||0)<8000;
-   const tag=p.id===s.hostId?'<span class="tag gold">ディーラー</span>':bet?'<span class="tag want">ベット済み</span>':p.demo?'<span class="tag">CPU</span>':'<span class="tag">観戦中</span>';
-   return `<li class="member"><div class="member-row">${avatar(p)}<div class="member-main"><strong>${esc(p.name)}${p.id===s.me?'<small class="you">あなた</small>':''}</strong><span>${tag}${fresh?'<span class="tag new">NEW</span>':''}${!p.online?'<span class="tag offline">接続待ち</span>':''}<span class="pts">${number(p.points)}点</span></span></div>
+   const tag=p.id===s.hostId?'<span class="tag gold">ディーラー</span>':bet?'<span class="tag want">ベット済み</span>':p.demo?'<span class="tag">CPU</span>':'<span class="tag">ステイ</span>';
+   return `<li class="member"><div class="member-row">${avatar(p)}<div class="member-main"><strong>${esc(p.name)}${p.id===s.me?'<small class="you">あなた</small>':''}</strong><span>${tag}${streakTag(hl.streaks?.[p.id])}${fresh?'<span class="tag new">NEW</span>':''}${!p.online?'<span class="tag offline">接続待ち</span>':''}<span class="pts">${number(p.points)}点</span></span></div>
     ${s.isHost?`<button class="btn sm ${editing===p.id?'active':''}" data-edit="${p.id}" aria-expanded="${editing===p.id}" aria-label="${esc(p.name)}の持ち点を調整">点数</button>`:''}</div>
     ${s.isHost&&editing===p.id?`<div class="points-editor" role="group" aria-label="${esc(p.name)}の持ち点">${[100,1000,-100,-1000].map(v=>`<button class="btn ${v>0?'plus':'minus'}" data-points="${p.id}" data-delta="${v}">${v>0?'+':'−'}${Math.abs(v)}</button>`).join('')}</div>`:''}</li>`}).join('');
  const watchers=s.players.filter(p=>p.id!==s.hostId);
@@ -398,26 +437,96 @@ function renderKotoba(s){
  const input=$('#kb-word');if(input){input.value=kbDraft.text}
  updateTimer();
 }
+// ---------- ひとこと演技 ----------
+const HK_PHASE={ready:'演技の準備',answer:'回答受付中',result:'結果発表'};
+const LET='ABCDEF';
+let hkDraft=null;
+const pct=(a,b)=>b?`${Math.round(a/b*100)}%`:'—';
+function hkDraftFor(s){
+ const key=`${s.id}:${s.hk.round}`;
+ if(!hkDraft||hkDraft.key!==key)hkDraft={key,pick:s.hk.myAnswer?.pick??null};
+ return hkDraft;
+}
+function renderHitokoto(s){
+ const hk=s.hk,me=s.players.find(p=>p.id===s.me),url=new URL(base);url.searchParams.set('room',s.id);
+ const listeners=s.players.filter(p=>p.id!==s.hostId&&!p.demo);
+ const timer=`<div class="timer" id="timer" ${s.timer?'':'hidden'}><div class="timer-caption"><span id="timer-label"></span><strong id="timer-seconds"></strong></div><div class="timer-track" role="progressbar" aria-label="残り時間" aria-valuemin="0" aria-valuemax="100"><div id="timer-fill"></div></div></div>`;
+ const wordCard=`<div class="hk-word"><p class="eyebrow">第${hk.round}回のひとこと</p><h2>「${esc(hk.word)}」</h2></div>`;
+ const optList=(mode)=>`<ol class="hk-options ${mode}">${hk.options.map((o,i)=>{
+   const secret=hk.secret===i,picked=mode==='pick'&&hkDraft?.pick===i,res=hk.phase==='result'?hk.last:null;
+   const cnt=res?res.counts[i]:0,w=res&&res.total?Math.round(cnt/res.total*100):0;
+   const cls=[secret&&(s.isHost||res)?'secret':'',picked?'on':'',res&&hk.last.rows.find(x=>x.id===s.me)?.pick===i?'mine':''].join(' ');
+   const inner=`<span class="let">${LET[i]}</span><span class="txt">${esc(o)}</span>${res?`<span class="cnt">${cnt}人</span><span class="bar" style="--w:${w}%"></span>`:secret&&s.isHost?'<span class="tag gold">あなたの担当</span>':''}`;
+   return `<li>${mode==='pick'?`<button type="button" class="hk-opt ${cls}" data-hk-pick="${i}" aria-pressed="${picked}">${inner}</button>`:`<div class="hk-opt ${cls}">${inner}</div>`}</li>`}).join('')}</ol>`;
+ let panel='';
+ if(hk.phase==='ready'){
+  panel=s.isHost?`<div class="hk-brief"><p>あなたの担当は <b>${LET[hk.secret]}「${esc(hk.options[hk.secret])}」</b>。この場面のつもりで、配信で「${esc(hk.word)}」と演じてください。</p></div>${optList('view')}
+   <button class="btn primary big" id="hk-open">回答受付スタート（45秒）</button><button class="btn" id="hk-redraw">ひとことを引き直す</button>
+   <p class="note center">担当の場面はリスナーには見えていません</p>`
+  :`${optList('view')}<p class="note center">配信者が演じます。受付が始まったら、どの場面かを1つ選んでね</p>`;
+ } else if(hk.phase==='answer'){
+  if(s.isHost){
+   panel=`${optList('view')}${timer}<div class="hk-count"><b>${hk.answered}</b>人が回答</div><button class="btn primary big" id="hk-close">締め切って公開</button>`;
+  } else {
+   const mine=hk.myAnswer;hkDraftFor(s);
+   panel=`<div id="hk-form" class="hk-form">${optList('pick')}${timer}
+    <p class="note center">${mine?`回答済み：<b>${LET[mine.pick]}</b>（締め切りまで変えられます）`:'タップで回答。締め切りまで変えられます'}</p></div>`;
+  }
+ } else {
+  const r=hk.last,mine=r.rows.find(x=>x.id===s.me);
+  const head=`<div class="hk-verdict ${r.hit?'hit':'miss'}"><strong>${r.total?r.hit?'伝わった！':'伝わらず…':'回答なし'}</strong><span>正解は ${LET[r.secret]}「${esc(r.options[r.secret])}」 · ${r.correct}/${r.total}人（${pct(r.correct,r.total)}）</span>
+   ${mine?`<p class="mine ${mine.ok?'up':'down'}">あなた：${LET[mine.pick]} → <b>${mine.ok?'正解':'はずれ'}</b></p>`:''}
+</div>`;
+  panel=`${head}${optList('view')}${s.isHost?'<button class="btn primary big" id="hk-next">次のひとことへ</button>':'<p class="note center">配信者が次のひとことに進めるまでお待ちください</p>'}`;
+ }
+ const H=hk.host,my=hk.me;
+ const stats=`<section class="card hk-stats"><div class="card-head"><h2>成績</h2><span>${s.isHost&&hk.phase!=='answer'?'<button class="btn sm" id="hk-reset">リセット</button>':'この部屋の合計'}</span></div>
+  <div class="hk-statrow host"><span class="who">配信者 ${esc(s.players.find(p=>p.id===s.hostId)?.name||'')}</span><span>伝わった回 <b>${H.hits}/${H.rounds}</b></span><span>正答率 <b>${pct(H.correct,H.answers)}</b></span></div>
+  ${my?`<div class="hk-statrow me"><span class="who">あなた</span><span>正解数 <b>${my.correct}</b></span><span>正答率 <b>${pct(my.correct,my.answers)}</b></span></div>`:''}
+  ${hk.ranking.length?`<ol class="hk-rank">${hk.ranking.map((x,i)=>`<li class="${x.id===s.me?'me':''}"><span class="no">${i+1}</span><span class="name">${esc(x.name)}</span><span>${x.correct}問</span><span class="pct">${pct(x.correct,x.answers)}</span></li>`).join('')}</ol>`:'<p class="note">まだ回答がありません</p>'}
+  <p class="note">配信者の「伝わった回」は、いちばん票が集まった場面が正解だった回の数です。</p></section>`;
+ const members=[...s.players].filter(p=>!p.demo).sort((a,b)=>(b.id===s.hostId)-(a.id===s.hostId)).map(p=>{
+   const done=hk.answeredIds.includes(p.id),fresh=Date.now()-(firstSeen.get(p.id)||0)<8000,st=hk.ranking.find(x=>x.id===p.id);
+   const tag=p.id===s.hostId?'<span class="tag gold">演者</span>':hk.phase==='answer'?(done?'<span class="tag want">回答済み</span>':'<span class="tag">考え中</span>'):'';
+   return `<li class="member"><div class="member-row">${avatar(p)}<div class="member-main"><strong>${esc(p.name)}${p.id===s.me?'<small class="you">あなた</small>':''}</strong><span>${tag}${fresh?'<span class="tag new">NEW</span>':''}${!p.online?'<span class="tag offline">接続待ち</span>':''}${st?`<span class="muted">正解 ${st.correct}/${st.answers}</span>`:''}</span></div>
+</div>
+    </li>`}).join('');
+ const menu=menuOpen?`<div class="scrim" data-close-menu></div><div class="menu card" role="menu"><button class="menu-item" data-share role="menuitem">招待URLを共有</button><a class="menu-item" href="./" role="menuitem">トップへ（部屋はそのまま）</a></div>`:'';
+ const invite=s.isHost?`<section class="card invite"><p>リスナーにこのURLを送ってね</p><div class="invite-row"><code>${esc(url.host+url.pathname+url.search)}</code><button class="btn" data-share>共有</button></div></section>`:'';
+ app.innerHTML=`<header class="topbar"><a class="brand" href="./">${icon('mark')}<span>あつまる卓</span></a><div class="top-actions"><button class="icon-btn" data-share aria-label="招待URLを共有">${icon('share')}</button><button class="icon-btn ${menuOpen?'active':''}" data-menu aria-label="メニュー" aria-expanded="${menuOpen}">${icon('menu')}</button></div></header>${menu}
+ <section class="room-head"><div class="chips"><span class="room-id">ROOM ${esc(s.id)}</span><span class="phase ${hk.phase==='answer'?'live':''}">${HK_PHASE[hk.phase]}</span><span class="counts">入室 ${listeners.filter(p=>p.online).length} · 回答 ${hk.phase==='result'?hk.last.total:hk.answered}</span></div>
+  <h1>${esc(s.title)}</h1><p>ひとこと演技 · 第${hk.round}回${s.isHost?' · あなたが演者':''}</p></section>
+ <div class="layout"><div class="main-col">
+  <section class="card stage hk-stage" id="hk-stage">${wordCard}${panel}</section>
+  ${stats}${rulesHtml('hitokoto')}${invite}
+ </div><aside class="side-col">
+  <section class="card members"><div class="card-head"><h2>入室中 <span class="count">${listeners.length}</span></h2><span>入室中の全員が回答できます</span></div><ul>${members}</ul></section>
+  <details class="card log" id="log" ${logOpen?'open':''}><summary>卓のできごと</summary><ol>${s.logs.slice(0,12).map(t=>`<li>${esc(t)}</li>`).join('')}</ol></details>
+ </aside></div><footer class="foot">あつまる卓 · 集まって、囲んで、盛り上がる。</footer>`;
+ updateTimer();
+}
 // ---------- first-time explanation after entering a room ----------
 const INTRO={
  host:{
   chinchiro:['リスナーが「参加希望」を出したら、待機所で「指名」して卓に入れます（最大3人）。','リスナーの持ち点は0から始まります。名前の横の「点数」で配ってください。','2人以上そろったら「ゲームスタート」。招待URLは右上の共有ボタンからどうぞ。'],
   cheat:['リスナーが「参加希望」を出したら、待機所で「指名」して卓に入れます（最大3人）。','リスナーの持ち点は0から始まります。「点数」で配ってください。','あなたの番では、普通のサイコロか「シゴロ賽」を選べます。見破られたら掛け金の10倍を払います。'],
   highlow:['リスナーの持ち点は0から始まります。名前の横の「点数」で配ってください。','あなたは「カードをめくる」を押すだけ。入室中のリスナー全員がベットできます。','招待URLは右上の共有ボタンからどうぞ。'],
+  hitokoto:['あなたにだけ、ひとことと「担当の場面」が見えます。その場面のつもりで、配信で演じてください。','演じたら「回答受付スタート」。リスナーは45秒で6つの場面から選びます。','いちばん票が集まった場面が正解なら「伝わった回」。招待URLは右上の共有ボタンから。'],
   kotoba:['参加にはライフが1つ要ります。リスナーの名前の横の「ライフ」で足してください。','参加希望を出した人を「指名」して開始（最大8人）。','並べ替えとオープンは、あなただけが行います。招待URLは右上の共有ボタンから。']
  },
  listener:{
   chinchiro:['「参加希望」を出すと、配信者に指名されたときに卓に入れます。','このまま観戦もできます。持ち点は配信者が配ります。'],
   cheat:['「参加希望」を出すと、配信者に指名されたときに卓に入れます。このまま観戦もできます。','参加中は、いつでも「イカサマを指摘」できます。当たれば掛け金の10倍、外れたら大損です。'],
   highlow:['次のカードが今より上（ハイ）か下（ロー）かに賭けられます。','持ち点は配信者が配ります。0点のままでもベットに参加できます。'],
+  hitokoto:['配信者がひとことを演じます。どの場面のつもりかを、6つから1つ選んで当ててください。','受付は45秒。入室中の全員が回答でき、正解数と正答率が記録されます。'],
   kotoba:['「参加希望」を出すと、配信者に指名されたときに参加できます（ライフが1つ要ります。ライフは配信者が足します）。','このまま観戦もできます。']
  }
 };
-function introKind(s){return s.gameType==='highlow'?'highlow':s.gameType==='kotoba'?'kotoba':s.gameType==='chinchiro-cheat'?'cheat':'chinchiro'}
+function introKind(s){return s.gameType==='hitokoto'?'hitokoto':s.gameType==='highlow'||s.gameType==='highlow-bunny'?'highlow':s.gameType==='kotoba'?'kotoba':s.gameType==='chinchiro-cheat'?'cheat':'chinchiro'}
 function showIntro(s){
  const host=s.isHost,kind=introKind(s),lines=INTRO[host?'host':'listener'][kind],me=s.players.find(p=>p.id===s.me);
- const canWant=!host&&kind!=='highlow'&&!me?.want;
- const names={chinchiro:'チンチロ',cheat:'チンチロ（イカサマあり）',highlow:'ハイ＆ロー',kotoba:'ことばならべ'};
+ const canWant=!host&&['chinchiro','cheat','kotoba'].includes(kind)&&!me?.want;
+ const names={chinchiro:'チンチロ',cheat:'チンチロ（イカサマあり）',highlow:'ハイ＆ロー',kotoba:'ことばならべ',hitokoto:'ひとこと演技'};
  const box=$('#intro');
  box.innerHTML=`<div class="intro-card card" role="dialog" aria-modal="true" aria-labelledby="intro-title"><p class="eyebrow">${host?'配信者のあなたへ':'ようこそ'}</p><h2 id="intro-title">${esc(names[kind])}</h2><ul>${lines.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
   ${canWant?'<button class="btn primary big" data-intro="want">参加希望を出して入る</button><button class="btn big" data-intro="watch">観戦で入る</button>':'<button class="btn primary big" data-intro="ok">OK</button>'}</div>`;
@@ -448,10 +557,16 @@ app.addEventListener('click',async e=>{
  if(t.id==='kb-retheme')return action({type:'kb-retheme'});
  if(t.id==='kb-reveal'){t.disabled=true;return action({type:'kb-reveal'})}
  if(t.id==='kb-reset'){menuOpen=false;return action({type:'kb-reset'})}
+ if('hkPick' in d){const i=Number(d.hkPick);hkDraft.pick=i;action({type:'hk-answer',pick:i});return}
+ if(t.id==='hk-open'){t.disabled=true;return action({type:'hk-open'})}
+ if(t.id==='hk-close'){t.disabled=true;return action({type:'hk-close'})}
+ if(t.id==='hk-next'){t.disabled=true;return action({type:'hk-next'})}
+ if(t.id==='hk-redraw')return action({type:'hk-redraw'});
+ if(t.id==='hk-reset'){if(!confirm('配信者とリスナー全員の正解数・正答率を0に戻しますか？'))return;return action({type:'hk-reset'})}
  if('hlPick' in d){hlDraft.pick=d.hlPick;last='';render();return}
  if('hlColor' in d){hlDraft.color=d.hlColor||null;last='';render();return}
  if('hlAmt' in d){hlDraft.amount=Number(d.hlAmt);last='';render();return}
- if('hlCancel' in d)return action({type:'hl-bet',pick:null});
+ if('hlStay' in d){hlDraft.pick=null;if(s.hl.myBet)return action({type:'hl-bet',pick:null});last='';render();return}
  if(t.id==='hl-flip'){t.disabled=true;return action({type:'hl-flip'})}
  if('bet' in d){betDrafts[`${s.id}:${s.gameNumber}:${s.round}`]=Number(d.bet);last='';render();return}
  if(t.id==='start')return action({type:'start'});
@@ -516,7 +631,7 @@ function updateTimer(){
  const n=now(),remaining=Math.max(0,t.end-n),ratio=Math.min(1,remaining/t.total);
  fill.style.transform=`scaleX(${ratio})`;
  $('#timer-seconds').textContent=`${Math.ceil(Math.min(t.total,remaining)/1000)}秒`;
- $('#timer-label').textContent=n<t.start?'転がっています…':t.kind==='express'?'言葉を出すまで':t.kind==='judge'?'判定まで':t.kind==='bet'?'時間切れで100点に確定':t.kind==='roll'?'時間切れで自動で振ります':'自動で次へ進みます';
+ $('#timer-label').textContent=n<t.start?'転がっています…':t.kind==='express'?'言葉を出すまで':t.kind==='answer'?'回答の締め切りまで':t.kind==='judge'?'判定まで':t.kind==='bet'?'時間切れで100点に確定':t.kind==='roll'?'時間切れで自動で振ります':'自動で次へ進みます';
  $('.timer-track')?.setAttribute('aria-valuenow',String(Math.round(ratio*100)));
  $('#timer')?.classList.toggle('urgent',remaining<=5000);
 }
