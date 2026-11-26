@@ -290,31 +290,38 @@ function hlDraftFor(s,me){
  return {...hlDraft,max};
 }
 const streakTag=n=>n?`<span class="tag streak">${n}連勝</span>`:'';
+let hlSeenRound=null;
 let courtPreloaded=false;
 function renderHighLow(s){
  cardDeck=s.gameType==='highlow-bunny'?'bunny':'normal';
  if(cardDeck==='bunny'&&!courtPreloaded){courtPreloaded=true;for(const x of 'hscd')for(let n=1;n<=13;n++)new Image().src=`card-${x}${n}.webp`}
  const hl=s.hl,me=s.players.find(p=>p.id===s.me),url=new URL(base);url.searchParams.set('room',s.id);
- const last=hl.last,fresh=last&&hlAnimated!==last.round&&now()-last.at<6000;
- if(last&&hlAnimated==null&&!fresh)hlAnimated=last.round;
+ const last=hl.last,open=!!hl.revealed;
+ // flip: the face-down card on the right turns over once per round; slide: after "next" it moves to the left
+ const fresh=open&&last&&hlAnimated!==last.round&&now()-last.at<6000;
+ if(open&&last&&hlAnimated==null&&!fresh)hlAnimated=last.round;
+ const slide=!open&&hlSeenRound!=null&&hl.round>hlSeenRound;hlSeenRound=hl.round;
  const anim=fresh?'flip-in':'';
  const d=s.isHost?null:hlDraftFor(s,me);
  const outcome=last?(last.next.rank>last.prev.rank?'ハイ':last.next.rank<last.prev.rank?'ロー':'同じ数字'):'';
  const mine=last?.results.find(x=>x.id===s.me);
  const winners=last?last.results.filter(x=>x.delta>0).length:0;
- const banner=last?`<div class="hl-banner ${fresh?'pop':''}"><strong>${outcome}${last.next.rank===last.prev.rank?'':'！'}</strong><span>${cardName(last.prev)} → ${cardName(last.next)} · ${isRed(last.next)?'赤':'黒'} · 勝ち ${winners}人</span>
+ const banner=open&&last?`<div class="hl-banner ${fresh?'pop':''}"><strong>${outcome}${last.next.rank===last.prev.rank?'':'！'}</strong><span>${cardName(last.prev)} → ${cardName(last.next)} · ${isRed(last.next)?'赤':'黒'} · 勝ち ${winners}人</span>
    ${mine?`<p class="mine ${mine.delta>0?'up':mine.delta<0?'down':''}">あなた：${PICK[mine.pick]}${mine.color?`・${COLOR[mine.color]}`:''} ${number(mine.amount)}点 → <b>${signed(mine.delta)}</b>${mine.won?` · ${mine.streak}連勝中`:mine.lost?' · 連勝リセット':''}</p>`:''}</div>`:'<div class="hl-banner"><strong>ハイ？ ロー？</strong><span>次のカードが今より上か下かを当てよう</span></div>';
 
  const table=`<div class="hl-table">
-   <div class="hl-current"><div class="flip ${anim}">${cardHtml(hl.current,'lg')}</div><span>いまのカード</span></div>
-   <div class="hl-next">${backHtml('lg')}<span>次のカード</span></div></div>`;
+   <div class="hl-current"><div class="${slide?'slide-in':''}">${cardHtml(hl.current,'lg')}</div><span>いまのカード</span></div>
+   <div class="hl-next">${open?`<div class="flip ${anim}">${cardHtml(hl.revealed,'lg')}</div><span>めくったカード</span>`:`<div class="${slide?'deal-in':''}">${backHtml('lg')}</div><span>次のカード</span>`}</div></div>`;
 
  const tally=hl.tally;
  const tallyHtml=`<div class="hl-tally"><span class="tag up">ハイ ${tally.high}</span><span class="tag down">ロー ${tally.low}</span><span class="tag">赤 ${tally.red}</span><span class="tag">黒 ${tally.black}</span><span class="tag">ステイ ${Math.max(0,s.players.length-1-tally.total)}</span><span class="muted">合計 ${number(tally.stake)}点</span></div>`;
 
  let panel='';
  if(s.isHost){
-  panel=`<div class="hl-host">${tallyHtml}<button class="btn primary big" id="hl-flip">カードをめくる</button><p class="note center">ベット ${tally.total}人。めくるまで変更できます · 山札 残り${hl.deckLeft}枚</p></div>`;
+  panel=open?`<div class="hl-host"><button class="btn primary big" id="hl-next">次のゲームへ</button><p class="note center">めくったカードが左に移り、次のベットが始まります · 山札 残り${hl.deckLeft}枚</p></div>`
+   :`<div class="hl-host">${tallyHtml}<button class="btn primary big" id="hl-flip">右のカードをめくる</button><p class="note center">ベット ${tally.total}人。めくるまで変更できます · 山札 残り${hl.deckLeft}枚</p></div>`;
+ } else if(open){
+  panel=`<p class="note center hl-wait">配信者が「次のゲームへ」を押すと、次のベットが始まります</p>`;
  } else {
   const prev=hl.current.rank,returned=!d.pick?0:d.color?d.amount*4:d.amount*2;
   const half=Math.max(0,Math.floor(d.max/200)*100);
@@ -337,12 +344,23 @@ function renderHighLow(s){
   </form>${tallyHtml}`;
  }
 
- const bettors=hl.bets.map(b=>{const p=s.players.find(x=>x.id===b.id);return p?`<li>${avatar(p,'sm')}<span class="name">${esc(p.name)}</span><span class="tag ${b.pick==='high'?'up':'down'}">${PICK[b.pick]}</span>${b.color?`<span class="tag ${b.color==='red'?'redtag':''}">${COLOR[b.color]}</span>`:''}${streakTag(hl.streaks?.[b.id])}<span class="pts">${number(b.amount)}</span></li>`:''}).join('');
- const results=last?.results.length?`<section class="card hl-results"><div class="card-head"><h2>第${last.round}回の結果</h2><span>${cardName(last.prev)} → ${cardName(last.next)}</span></div><ol>${last.results.map(x=>`<li><span class="name">${esc(x.name)}</span><span class="pick">${PICK[x.pick]}${x.color?`・${COLOR[x.color]}`:''} ${number(x.amount)}</span><span class="tag ${x.delta>0?'up':x.delta<0?'down':''}">${signed(x.delta)}</span>${streakTag(x.won?x.streak:0)}<span class="pts">${number(x.points)}</span></li>`).join('')}</ol></section>`:'';
- const past=hl.history.slice(0,-1).slice(-5).reverse();
+ const past=hl.history.slice(0,open?-2:-1).slice(-5).reverse();
  const history=`<div class="hl-past" aria-label="これまでのカード（新しい順）"><span class="label">これまで</span><div class="row">${past.length?past.map((c,i)=>`<div class="past ${i===0?'latest':''}">${cardHtml(c,'xs')}<small>${i===0?'前回':`${i+1}回前`}</small></div>`).join(''):'<p class="note">まだめくっていません</p>'}${Array.from({length:Math.max(0,5-past.length)},()=>'<div class="past empty"><div class="pcard xs ghost"></div><small>&nbsp;</small></div>').join('')}</div></div>`;
 
- const members=[...s.players].sort((a,b)=>(b.id===s.hostId)-(a.id===s.hostId)||(b.points??0)-(a.points??0)).map(p=>{
+ // host board right under the cards: before the flip the 5 biggest bets, after it the 5 biggest swings
+ const pick=x=>`<span class="tag ${x.pick==='high'?'up':'down'}">${PICK[x.pick]}</span>${x.color?`<span class="tag ${x.color==='red'?'redtag':''}">${COLOR[x.color]}</span>`:''}`;
+ const boardRow=(p,x,extra)=>`<li>${avatar(p,'sm')}<div class="who"><div class="top"><span class="name">${esc(p.name)}</span>${streakTag(hl.streaks?.[p.id])}</div><div class="what">${pick(x)}<b>${number(x.amount)}点</b>${extra}</div></div><span class="pts"><small>持ち点</small>${number(p.points)}</span></li>`;
+ let board='';
+ if(s.isHost){
+  if(open&&last){
+   const rows=[...last.results].sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta)||b.amount-a.amount).slice(0,5);
+   board=`<section class="card hl-board"><div class="hl-board-head"><h2>場の動き</h2><b>変動が大きい順</b><span>${last.results.length}人が参加 · 勝ち ${winners}人</span></div>${rows.length?`<ol>${rows.map(x=>{const p=s.players.find(q=>q.id===x.id)||{id:x.id,name:x.name,points:x.points};return boardRow(p,x,`<span class="tag delta ${x.delta>0?'up':x.delta<0?'down':''}">${signed(x.delta)}</span>`)}).join('')}</ol>`:'<p class="note">このカードは誰もベットしていません</p>'}</section>`;
+  } else {
+   const rows=[...hl.bets].sort((a,b)=>b.amount-a.amount).slice(0,5);
+   board=`<section class="card hl-board"><div class="hl-board-head"><h2>場の動き</h2><b>高額ベット</b><span>${hl.tally.total}人 · 合計 ${number(hl.tally.stake)}点</span></div>${rows.length?`<ol>${rows.map(x=>{const p=s.players.find(q=>q.id===x.id);return p?boardRow(p,x,''):''}).join('')}</ol>`:'<p class="note">まだベットがありません</p>'}</section>`;
+  }
+ }
+ const members=[...s.players].sort((a,b)=>(b.points??0)-(a.points??0)).map(p=>{
    const bet=hl.bets.find(b=>b.id===p.id),fresh=Date.now()-(firstSeen.get(p.id)||0)<8000;
    const tag=p.id===s.hostId?'<span class="tag gold">ディーラー</span>':bet?'<span class="tag want">ベット済み</span>':p.demo?'<span class="tag">CPU</span>':'<span class="tag">ステイ</span>';
    return `<li class="member"><div class="member-row">${avatar(p)}<div class="member-main"><strong>${esc(p.name)}${p.id===s.me?'<small class="you">あなた</small>':''}</strong><span>${tag}${streakTag(hl.streaks?.[p.id])}${fresh?'<span class="tag new">NEW</span>':''}${!p.online?'<span class="tag offline">接続待ち</span>':''}<span class="pts">${number(p.points)}点</span></span></div>
@@ -357,9 +375,7 @@ function renderHighLow(s){
   <h1>${esc(s.title)}</h1><p>第${hl.round}回 · ${s.isHost?'あなたがディーラー':'ハイかローに賭けよう'}</p></section>
  <div class="layout"><div class="main-col">
   <section class="card stage hl-stage">${table}${history}${banner}${panel}</section>
-  ${rulesHtml('highlow')}
-  ${hl.bets.length?`<section class="card hl-bettors"><div class="card-head"><h2>ベット中</h2><span>${hl.bets.length}人</span></div><ul>${bettors}</ul></section>`:''}
-  ${results}${invite}
+  ${board}${invite}${rulesHtml('highlow')}
  </div><aside class="side-col">
   <section class="card members"><div class="card-head"><h2>入室中 <span class="count">${watchers.length}</span></h2><span>${s.isHost?'名前の「点数」で持ち点を調整':'配信者が持ち点を配ります'}</span></div><ul>${members}</ul></section>
   <details class="card log" id="log" ${logOpen?'open':''}><summary>卓のできごと</summary><ol>${s.logs.slice(0,12).map(t=>`<li>${esc(t)}</li>`).join('')}</ol></details>
@@ -568,6 +584,7 @@ app.addEventListener('click',async e=>{
  if('hlAmt' in d){hlDraft.amount=Number(d.hlAmt);last='';render();return}
  if('hlStay' in d){hlDraft.pick=null;if(s.hl.myBet)return action({type:'hl-bet',pick:null});last='';render();return}
  if(t.id==='hl-flip'){t.disabled=true;return action({type:'hl-flip'})}
+ if(t.id==='hl-next'){t.disabled=true;return action({type:'hl-next'})}
  if('bet' in d){betDrafts[`${s.id}:${s.gameNumber}:${s.round}`]=Number(d.bet);last='';render();return}
  if(t.id==='start')return action({type:'start'});
  if(t.id==='next-round')return action({type:'next'});

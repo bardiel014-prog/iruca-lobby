@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {payout,hlInit,hlBet,hlFlip,hlState,freshDeck,maxStake} from './highlow.mjs';
+import {payout,hlInit,hlBet,hlFlip,hlNext,hlState,freshDeck,maxStake} from './highlow.mjs';
 const c=(rank,suit='S')=>({rank,suit});
 test('ハイ＆ロー：的中2倍・同数返却・外れ没収',()=>{
   assert.equal(payout({amount:300,pick:'high'},c(5),c(9)).delta,300);
@@ -29,14 +29,20 @@ test('ハイ＆ロー：ベット・めくり・持ち点・山札の切り直�
   const res=hlFlip(r,[host,a,z]);
   assert.equal(a.points,1600);assert.equal(z.points,0);assert.equal(host.points,3000);
   assert.equal(res.results.find(x=>x.id==='a').delta,600);
-  assert.deepEqual(r.hl.current,c(12,'H'));assert.equal(r.hl.round,2);assert.deepEqual(r.hl.bets,{});
+  // the flipped card stays on the right until the host moves on; no bets or second flip meanwhile
+  assert.deepEqual(r.hl.current,c(7));assert.deepEqual(r.hl.revealed,c(12,'H'));assert.equal(r.hl.round,1);assert.deepEqual(r.hl.bets,{});
+  assert.deepEqual(hlState(r,a).revealed,c(12,'H'));
+  assert.throws(()=>hlBet(r,a,{pick:'low',amount:0}),/次のゲーム/);
+  assert.throws(()=>hlFlip(r,[host,a,z]),/もうめくりました/);
+  hlNext(r);assert.deepEqual(r.hl.current,c(12,'H'));assert.equal(r.hl.revealed,null);assert.equal(r.hl.round,2);
+  assert.throws(()=>hlNext(r),/まだカード/);
   r.hl.deck=[];hlFlip(r,[host,a,z]);assert.equal(r.hl.reshuffled,true);assert.equal(r.hl.deck.length,50);
   assert.equal(new Set(freshDeck().map(x=>x.suit+x.rank)).size,52);
 });
 test('ハイ＆ロー：連勝は的中で+1、外れで0、ベットなし・同数（色なし）は据え置き',()=>{
   const host={id:'h',points:3000},a={id:'a',points:1000},b={id:'b',points:1000};
   const r={host,players:new Map([[a.id,a],[b.id,b]])};hlInit(r);
-  const flip=(next,bets)=>{for(const [p,x] of bets)hlBet(r,p,x);r.hl.deck.push(next);return hlFlip(r,[host,a,b])};
+  const flip=(next,bets)=>{for(const [p,x] of bets)hlBet(r,p,x);r.hl.deck.push(next);const res=hlFlip(r,[host,a,b]);hlNext(r);return res};
   r.hl.current=c(7);
   flip(c(9),[[a,{pick:'high',amount:100}],[b,{pick:'high',amount:0}]]);assert.equal(a.hlStreak,1);assert.equal(b.hlStreak,1,'0点ベットも数える');
   flip(c(3),[[a,{pick:'low',amount:100}]]);assert.equal(a.hlStreak,2);assert.equal(b.hlStreak,1,'ベットなしは据え置き');

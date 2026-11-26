@@ -429,7 +429,7 @@ div.game-row{cursor:default}
 button.hk-opt{cursor:pointer}
 button.hk-opt:active{transform:scale(.98)}
 .hk-opt .let{flex-shrink:0;width:26px;height:26px;display:grid;place-items:center;border-radius:7px;background:rgba(255,255,255,.08);font-weight:800;font-size:13px}
-.hk-opt .txt{flex:1;min-width:0;font-size:13px;font-weight:700;line-height:1.35;position:relative;z-index:1}
+.hk-opt .txt{flex:1;min-width:0;font-size:13px;font-weight:700;line-height:1.35;position:relative;z-index:1;word-break:auto-phrase;text-wrap:pretty}
 .hk-opt .cnt{flex-shrink:0;font-size:12px;font-weight:800;color:var(--muted);position:relative;z-index:1}
 .hk-opt .tag{position:absolute;right:6px;top:-1px;font-size:10px;padding:1px 6px}
 .hk-opt .bar{position:absolute;inset:0 auto 0 0;width:var(--w);background:rgba(255,255,255,.07);transition:width .6s ease}
@@ -481,3 +481,30 @@ button.hk-opt:active{transform:scale(.98)}
 .pcard.art{overflow:hidden;background:#fff}
 .pcard .court-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}
 .pcard.art .corner{display:none}
+/* ハイ＆ロー: flipped card slides from the right slot to the left, a new face-down card is dealt */
+.hl-next{perspective:900px}
+.slide-in{animation:hlSlide .6s cubic-bezier(.2,.8,.2,1) both}
+@keyframes hlSlide{from{transform:translateX(calc(100% + 14px))}to{transform:none}}
+.deal-in{animation:hlDeal .5s .25s cubic-bezier(.2,.8,.2,1) both}
+@keyframes hlDeal{from{transform:translate(30px,-24px) rotate(8deg);opacity:0}to{transform:none;opacity:1}}
+.hl-wait{padding:14px 8px;margin:0}
+.hl-current{position:relative;z-index:1}
+@media (prefers-reduced-motion:reduce){.slide-in,.deal-in{animation:none}}
+/* ハイ＆ロー: host board under the cards */
+.hl-board{padding:12px 14px 14px}
+.hl-board-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px}
+.hl-board-head h2{margin:0;font-family:var(--serif);font-size:18px}
+.hl-board-head b{font-size:13px;color:var(--gold)}
+.hl-board-head span{margin-left:auto;font-size:12px;color:var(--muted);font-weight:700}
+.hl-board ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.hl-board li{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:10px;background:rgba(255,255,255,.04);font-size:13px;font-weight:700}
+.hl-board .who{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.hl-board .top{display:flex;align-items:center;gap:6px;min-width:0}
+.hl-board .name{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hl-board .what{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.hl-board .what b{font-variant-numeric:tabular-nums}
+.hl-board .tag{font-size:11px;padding:1px 6px;flex-shrink:0}
+.hl-board .tag.delta{font-variant-numeric:tabular-nums}
+.hl-board .pts{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;font-size:15px;font-variant-numeric:tabular-nums}
+.hl-board .pts small{font-size:10px;color:var(--muted)}
+.hl-board .note{margin:4px 0 0}

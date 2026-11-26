@@ -1,4 +1,6 @@
 // ハイ＆ロー: the host turns the next card, every listener may bet on it.
+// Flow: bets open → host flips the face-down card on the right (settles bets) → host moves on,
+// the flipped card becomes the new current card on the left and betting opens again.
 // Payout (returned amount): high/low hit = bet x2, same rank = bet x1, miss = 0.
 // Optional colour call multiplies that: right colour x2, wrong colour = 0.
 const SUITS=['S','H','D','C'];
@@ -25,11 +27,12 @@ export function payout(bet,prev,next){
 }
 export function hlInit(r){
   const deck=freshDeck();const current=deck.pop();
-  r.hl={deck,current,round:1,bets:{},last:null,history:[current],reshuffled:false};
+  r.hl={deck,current,revealed:null,round:1,bets:{},last:null,history:[current],reshuffled:false};
 }
 export function hlBet(r,p,b){
   if(!r.hl)reject('ハイ＆ローの部屋ではありません');
   if(p===r.host)reject('配信者はカードをめくる係です');
+  if(r.hl.revealed)reject('次のゲームが始まるまでお待ちください');
   if(b.pick==null){delete r.hl.bets[p.id];return}
   if(!['high','low'].includes(b.pick))reject('ハイかローを選んでください');
   if(b.color!=null&&!['red','black'].includes(b.color))reject('色の選択が不正です');
@@ -50,6 +53,7 @@ export function cpuHighLowBets(r,players){
 export function hlFlip(r,players,at=Date.now()){
   if(!r.hl)reject('ハイ＆ローの部屋ではありません');
   const hl=r.hl,prev=hl.current;
+  if(hl.revealed)reject('もうめくりました。「次のゲームへ」で進めてください');
   if(!hl.deck.length){hl.deck=freshDeck(prev);hl.reshuffled=true}else hl.reshuffled=false;
   const next=hl.deck.pop();
   const byId=new Map(players.map(p=>[p.id,p]));
@@ -69,13 +73,18 @@ export function hlFlip(r,players,at=Date.now()){
   results.sort((a,b)=>b.delta-a.delta||b.won-a.won||a.lost-b.lost);
   hl.last={round:hl.round,prev,next,results,at};
   hl.history.push(next);hl.history=hl.history.slice(-12);
-  hl.current=next;hl.round++;hl.bets={};
+  hl.revealed=next;hl.bets={};
   return hl.last;
+}
+export function hlNext(r){
+  if(!r.hl)reject('ハイ＆ローの部屋ではありません');
+  const hl=r.hl;if(!hl.revealed)reject('まだカードをめくっていません');
+  hl.current=hl.revealed;hl.revealed=null;hl.round++;
 }
 export function hlState(r,me){
   const hl=r.hl;if(!hl)return null;
   const bets=Object.entries(hl.bets),count=k=>bets.filter(([,b])=>b.pick===k||b.color===k).length;
-  return {round:hl.round,current:hl.current,deckLeft:hl.deck.length,history:hl.history,last:hl.last,reshuffled:hl.reshuffled,
+  return {round:hl.round,current:hl.current,revealed:hl.revealed,deckLeft:hl.deck.length,history:hl.history,last:hl.last,reshuffled:hl.reshuffled,
     myBet:hl.bets[me.id]||null,
     tally:{total:bets.length,high:count('high'),low:count('low'),red:count('red'),black:count('black'),stake:bets.reduce((s,[,b])=>s+b.amount,0)},
     bets:bets.map(([id,b])=>({id,...b})),

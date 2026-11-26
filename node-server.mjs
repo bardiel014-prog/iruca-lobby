@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import {evaluate,balance,inGame,beginGame,setBet,startRoundIfReady,rollPlayer,tickGame,nextRound,returnLobby,logEvent,timerState,accuse} from './game.mjs';
 import {GAMES,gameDefinition} from './public/games.js';
 import {roomExpiry,roomExpired} from './room-life.mjs';
-import {HL_GAME,HL_GAMES,hlInit,hlBet,hlFlip,hlState,cpuHighLowBets,cardLabel} from './highlow.mjs';
+import {HL_GAME,HL_GAMES,hlInit,hlBet,hlFlip,hlNext,hlState,cpuHighLowBets,cardLabel} from './highlow.mjs';
 import {HK_GAME,hkInit,hkRedraw,hkOpen,hkAnswer,hkClose,hkTick,hkNext,hkResetStats,hkTimer,hkState} from './hitokoto.mjs';
 import {KB_GAME,kbInit,kbSelect,kbLives,kbStart,kbRetheme,kbWord,kbTick,kbMove,kbReveal,kbReset,kbTimer,kbState} from './kotoba.mjs';
 
@@ -25,7 +25,7 @@ function state(r,me){
     players:[r.host,...r.players.values()].map(p=>({id:p.id,name:p.name,want:p.want,online:active(p),demo:!!p.demo,
       points:balance(p),plays:p.plays,dice:p.dice,attempts:p.attempts,done:p.done,bet:p.bet||100,ready:!!p.ready,roundDelta:p.roundDelta??null}))};
 }
-const OG_IMAGES=['og-default.jpg','og-chinchiro.jpg','og-chinchiro-cheat.jpg','og-highlow.jpg','og-kotoba.jpg'];
+const OG_IMAGES=['og-default.jpg','og-chinchiro.jpg','og-chinchiro-cheat.jpg','og-highlow.jpg','og-kotoba.jpg','og-hitokoto.jpg'];
 // bunny deck art, all 52 cards (card-h1.webp … card-d13.webp)
 const CARD_IMAGES=[...'hscd'].flatMap(s=>Array.from({length:13},(_,i)=>`card-${s}${i+1}.webp`));
 const PUBLIC_BASE=(globalThis.process?.env?.LOBBY_PUBLIC_URL||'https://iruca.tech/lobby/').replace(/\/?$/,'/');
@@ -37,7 +37,7 @@ function ogTags(r,id){
   const title=r?`${r.host.name}の部屋で${game}を遊ぼう`:'あつまる卓 — 配信で、いっしょに。';
   const desc=r?`「${r.title}」に招待されています。URLを開いて名前を入れるだけで参加できます（登録なし）。`:'配信者とリスナーで遊べるゲーム。チンチロ・ハイ＆ロー・ことばならべ・ひとこと演技。URLを開くだけで参加・登録なし。';
   const url=PUBLIC_BASE+(r?`?room=${id}`:'');
-  return [['og:type','website'],['og:site_name','あつまる卓'],['og:locale','ja_JP'],['og:title',title],['og:description',desc],['og:url',url],['og:image',PUBLIC_BASE+`og-${kind==='hitokoto'?'default':kind}.jpg`],['og:image:width','1200'],['og:image:height','630'],['og:image:alt',`あつまる卓 ${game||''}`.trim()]]
+  return [['og:type','website'],['og:site_name','あつまる卓'],['og:locale','ja_JP'],['og:title',title],['og:description',desc],['og:url',url],['og:image',PUBLIC_BASE+`og-${kind}.jpg`],['og:image:width','1200'],['og:image:height','630'],['og:image:alt',`あつまる卓 ${game||''}`.trim()]]
     .map(([k,v])=>`<meta property="${k}" content="${attr(v)}">`).join('')+`<meta name="twitter:card" content="summary_large_image"><meta name="description" content="${attr(desc)}">`;
 }
 const log=logEvent;
@@ -116,7 +116,7 @@ export const server = http.createServer(async (req, res) => {
       if (!match[2] && req.method==='GET') return send(200,state(r,me));
       if (match[2] !== 'action' || req.method !== 'POST') fail('操作できません',405);
       const b=await body(req);
-      if (['select','start','finish','points','next','hl-flip','kb-select','kb-start','kb-retheme','kb-move','kb-reveal','kb-reset','kb-lives','hk-redraw','hk-open','hk-close','hk-next','hk-reset'].includes(b.type) && me!==r.host) fail('配信者だけが操作できます',403);
+      if (['select','start','finish','points','next','hl-flip','hl-next','kb-select','kb-start','kb-retheme','kb-move','kb-reveal','kb-reset','kb-lives','hk-redraw','hk-open','hk-close','hk-next','hk-reset'].includes(b.type) && me!==r.host) fail('配信者だけが操作できます',403);
       const isHL=HL_GAMES.has(r.gameType);
       const isKB=r.gameType===KB_GAME,isHK=!!r.hk;
       if(!isHK&&String(b.type).startsWith('hk-'))fail('このゲームでは使えない操作です');
@@ -190,9 +190,11 @@ export const server = http.createServer(async (req, res) => {
         const res=hlFlip(r,[r.host,...r.players.values()]),diff=res.next.rank-res.prev.rank;
         log(r,`第${res.round}回：${cardLabel(res.prev)} → ${cardLabel(res.next)}（${diff>0?'ハイ':diff<0?'ロー':'同じ数字'}）・勝ち ${res.results.filter(x=>x.delta>0).length}人`);
         if(r.hl.reshuffled)log(r,'山札を切り直しました');
-        cpuHighLowBets(r,[...r.players.values()]);
+      } else if(b.type==='hl-next') {
+        hlNext(r);cpuHighLowBets(r,[...r.players.values()]);
+        log(r,`第${r.hl.round}回：いまのカードは ${cardLabel(r.hl.current)}。ベット受付中`);
       } else fail('不明な操作です');
-      if(['start','bet','roll','next','hl-bet','hl-flip','kb-start','kb-word','kb-move','kb-reveal','hk-open','hk-answer','hk-close','hk-next'].includes(b.type))r.lastPlayedAt=Date.now();
+      if(['start','bet','roll','next','hl-bet','hl-flip','hl-next','kb-start','kb-word','kb-move','kb-reveal','hk-open','hk-answer','hk-close','hk-next'].includes(b.type))r.lastPlayedAt=Date.now();
       tickGame(r);kbAdvance(r);hkAdvance(r);
       return send(200,state(r,me));
     }
